@@ -1,0 +1,201 @@
+Here is the complete, single-file code.
+
+**Instructions:**
+1.  Open Notepad (Windows) or TextEdit (Mac).
+2.  Copy **ALL** the code below.
+3.  Paste it into your text editor.
+4.  Save the file as **`lineup_optimizer.html`**.
+5.  Email this file to yourself and open it on your iPhone. It will work instantly without needing any other files.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTBDE Lineup Optimizer</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; padding: 15px; margin: 0; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.2rem; color: #0056b3; margin-top: 0; text-align: center; }
+        h2 { font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 0; }
+        select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; }
+        button { background-color: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background-color: #004494; }
+        .lineup-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; align-items: center; }
+        .slot-num { font-weight: bold; color: #0056b3; width: 30px; }
+        .player-name { flex-grow: 1; font-weight: 500; }
+        .player-hand { font-size: 0.8rem; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
+        .reason { font-size: 0.75rem; color: #555; display: block; margin-top: 2px; }
+        .scout-note { background-color: #fff3cd; padding: 10px; border-radius: 8px; border-left: 5px solid #ffc107; margin-top: 10px; font-size: 0.9rem; }
+        .error { color: red; text-align: center; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>⚾ RTBDE Lineup Optimizer</h1>
+        <p style="text-align:center; color:#666; font-size:0.9rem;">Schaumburg Boomers vs. Lake Erie</p>
+        
+        <label for="pitcher-select"><strong>Select Opposing Pitcher:</strong></label>
+        <select id="pitcher-select">
+            <option value="friday_may_8">Friday: Andres Parra (LHP)</option>
+            <option value="saturday_may_9">Saturday: Brandon Scott (LHP)</option>
+            <option value="sunday_may_10">Sunday: Corbin Foy (RHP)</option>
+        </select>
+
+        <button onclick="generateLineup()">Generate Optimal Lineup</button>
+    </div>
+
+    <div id="results-area"></div>
+
+    <script>
+        // HARDCODED DATA FOR OFFLINE USE
+        const data = {
+          "team": "Schaumburg Boomers",
+          "opponent": "Lake Erie Crushers",
+          "jamie_rules": {
+            "leadoff_criteria": "High OBP or Contact Rate",
+            "no_consecutive_aggressive": true,
+            "prefer_lefty_vs_righty_pitcher": true,
+            "cleanup_power": true
+          },
+          "boomers_roster": {
+            "catchers": [
+              {"name": "Alex Calarco", "hand": "S", "pos": "C", "status": "Pro-1", "notes": "Switch hitter."},
+              {"name": "Jeff Nicol", "hand": "R", "pos": "C", "status": "Pro-2", "notes": "Righty bat."}
+            ],
+            "infielders": [
+              {"name": "Kyle Fitzgerald", "hand": "R", "pos": "IF", "status": "Exp-2", "notes": "Veteran."},
+              {"name": "Alec Craig", "hand": "L", "pos": "IF", "status": "Vet", "notes": "Lefty bat."},
+              {"name": "Will Prater", "hand": "L", "pos": "IF", "status": "Exp-2", "notes": "Lefty bat."},
+              {"name": "Anthony Calarco", "hand": "L", "pos": "IF", "status": "Pro-2", "notes": "Lefty power."},
+              {"name": "Tony Livermore", "hand": "L", "pos": "IF", "status": "Pro-1", "notes": "Lefty contact."}
+            ],
+            "outfielders": [
+              {"name": "Christian Fedko", "hand": "L", "pos": "OF", "status": "Exp-2", "notes": "Lefty bat."},
+              {"name": "Banks Tolley", "hand": "R", "pos": "OF", "status": "Pro-2", "notes": "Righty bat."},
+              {"name": "Myles Beale", "hand": "S", "pos": "OF", "status": "Pro-1", "notes": "Switch hitter."},
+              {"name": "Kellum Clark", "hand": "L", "pos": "OF", "status": "Exp-1", "notes": "Lefty bat."},
+              {"name": "Cole Turney", "hand": "L", "pos": "OF", "status": "Pro-1", "notes": "Lefty bat."}
+            ]
+          },
+          "lec_pitching_matchups": {
+            "friday_may_8": {
+              "pitcher": "Andres Parra",
+              "number": 32,
+              "hand": "LHP",
+              "confidence": "Low",
+              "weakness": "Inexperience, likely high walk rate.",
+              "recommendation": "Aggressive early counts. Test secondary pitches. Load up on Lefty Batters if they have high OBP."
+            },
+            "saturday_may_9": {
+              "pitcher": "Brandon Scott",
+              "number": 12,
+              "hand": "LHP",
+              "confidence": "Medium",
+              "weakness": "Control issues. High Walk Rate.",
+              "recommendation": "Work deep counts. Force walks. Avoid chasing sliders out of zone."
+            },
+            "sunday_may_10": {
+              "pitcher": "Corbin Foy",
+              "number": 26,
+              "hand": "RHP",
+              "confidence": "High",
+              "weakness": "Predictable mix. Rarely throws Changeup/Sinker.",
+              "recommendation": "Do not chase Slider out of zone. Sit on Fastball. He gives up hard contact."
+            }
+          }
+        };
+
+        let rosterData = data.boomers_roster;
+        let matchupData = data.lec_pitching_matchups;
+
+        function generateLineup() {
+            const pitcherKey = document.getElementById('pitcher-select').value;
+            const pitcherInfo = matchupData[pitcherKey];
+            
+            if (!pitcherInfo) {
+                alert("Pitcher data not found.");
+                return;
+            }
+
+            // 1. Gather all batters
+            let allBatters = [
+                ...rosterData.catchers.map(p => ({...p, role: 'C'})),
+                ...rosterData.infielders.map(p => ({...p, role: 'IF'})),
+                ...rosterData.outfielders.map(p => ({...p, role: 'OF'}))
+            ];
+
+            // 2. Score Batters based on Hand Matchup & Simple Logic
+            allBatters.forEach(batter => {
+                batter.score = 0;
+                
+                // Hand Advantage Logic
+                if (pitcherInfo.hand === 'LHP') {
+                    if (batter.hand === 'R' || batter.hand === 'S') batter.score += 10; // Righties hit LHP better
+                    if (batter.hand === 'L') batter.score -= 5; // Lefties struggle vs LHP (generally)
+                } else if (pitcherInfo.hand === 'RHP') {
+                    if (batter.hand === 'L' || batter.hand === 'S') batter.score += 10; // Lefties hit RHP better
+                    if (batter.hand === 'R') batter.score -= 5;
+                }
+
+                // Veteran/Experience Bonus (Simple proxy for skill until stats are added)
+                if (batter.status.includes('Vet') || batter.status.includes('Exp')) batter.score += 5;
+                
+                // Randomize slightly to break ties
+                batter.score += Math.random() * 2;
+            });
+
+            // 3. Sort by Score (Highest First)
+            allBatters.sort((a, b) => b.score - a.score);
+
+            // 4. Select Top 9
+            const bestNine = allBatters.slice(0, 9);
+
+            // 5. Display Results
+            let html = `
+                <div class="card">
+                    <h2>🎯 Optimal Lineup vs. ${pitcherInfo.pitcher} (${pitcherInfo.hand})</h2>
+                    <div class="scout-note">
+                        <strong>Scout Report:</strong> ${pitcherInfo.recommendation}<br>
+                        <em>Weakness: ${pitcherInfo.weakness}</em>
+                    </div>
+                    <div style="margin-top:15px;">
+            `;
+
+            bestNine.forEach((player, index) => {
+                let reason = "";
+                if (pitcherInfo.hand === 'LHP' && (player.hand === 'R' || player.hand === 'S')) reason = "Righty advantage vs LHP";
+                else if (pitcherInfo.hand === 'RHP' && (player.hand === 'L' || player.hand === 'S')) reason = "Lefty advantage vs RHP";
+                else reason = "Best available option";
+
+                html += `
+                    <div class="lineup-item">
+                        <span class="slot-num">${index + 1}.</span>
+                        <div style="flex-grow:1;">
+                            <span class="player-name">${player.name}</span>
+                            <span class="player-hand">${player.hand}</span>
+                            <span class="reason">${reason}</span>
+                        </div>
+                        <small style="color:#888;">${player.pos}</small>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            
+            // Add Bench Recommendations
+            const bench = allBatters.slice(9, 12);
+            html += `<div class="card"><h2>📋 Recommended Bench</h2>`;
+            bench.forEach(player => {
+                html += `<div class="lineup-item"><span class="player-name">${player.name}</span> <span class="player-hand">${player.hand}</span> <small>${player.pos}</small></div>`;
+            });
+            html += `</div>`;
+
+            document.getElementById('results-area').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+```
