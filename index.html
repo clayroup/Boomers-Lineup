@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTBDE Manager</title>
+    <title>RTBDE Season Manager</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; padding: 15px; margin: 0; }
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h1 { font-size: 1.2rem; color: #0056b3; margin-top: 0; text-align: center; }
         h2 { font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 0; }
         h3 { font-size: 0.9rem; color: #555; margin-top: 10px; }
-        select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; }
+        select, input, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; box-sizing: border-box; }
         button { background-color: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #004494; }
         button.secondary { background-color: #6c757d; }
@@ -27,13 +27,10 @@
         .badge-as-high { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .badge-as-low { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-        .tab-btn { flex: 1; min-width: 80px; padding: 10px; background: #eee; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+        .tab-btn { flex: 1; min-width: 80px; padding: 10px; background: #eee; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
         .tab-btn.active { background: #0056b3; color: white; }
         .view-section { display: none; }
         .view-section.active { display: block; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f9f9f9; }
         .rec-card { background: #e7f3ff; border: 1px solid #b3d7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
         .rec-title { font-weight: bold; color: #0056b3; }
         
@@ -53,20 +50,34 @@
             font-size: 0.8rem; margin-right: 8px;
         }
         .bench-item .slot-badge { background: #999; }
+        .inning-input { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .inning-input label { width: auto; margin-bottom: 0; }
+        .inning-input input { width: 60px; margin-bottom: 0; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>⚾ RTBDE Manager</h1>
-        <p style="text-align:center; color:#666; font-size:0.9rem;">Schaumburg Boomers vs. Lake Erie</p>
+        <h1>⚾ RTBDE Season Manager</h1>
         
-        <label for="pitcher-select"><strong>Select Opposing Pitcher:</strong></label>
-        <select id="pitcher-select" onchange="generateLineup()">
-            <option value="friday_may_8">Friday: Andres Parra (LHP)</option>
-            <option value="saturday_may_9">Saturday: Brandon Scott (LHP)</option>
-            <option value="sunday_may_10">Sunday: Corbin Foy (RHP)</option>
+        <!-- SERIES SELECTOR -->
+        <label><strong>Select Series:</strong></label>
+        <select id="series-select" onchange="loadSeries()">
+            <option value="lec_may_8">vs. Lake Erie (May 8-10)</option>
+            <option value="joliet_may_15">vs. Joliet Slammers (May 15-17)</option>
+            <option value="windy_city_may_22">vs. Windy City (May 22-24)</option>
         </select>
+
+        <!-- GAME CONTEXT -->
+        <div class="inning-input">
+            <label><strong>Inning:</strong></label>
+            <input type="number" id="current-inning" value="1" min="1" max="9">
+            
+            <label style="margin-left:10px;"><strong>Opposing Pitcher:</strong></label>
+            <select id="pitcher-select" style="flex-grow:1;">
+                <!-- Populated dynamically -->
+            </select>
+        </div>
     </div>
 
     <div class="card">
@@ -75,59 +86,63 @@
             <button class="tab-btn" onclick="switchTab('optimized')">Optimized</button>
             <button class="tab-btn" onclick="switchTab('setup')">Setup Lineup</button>
             <button class="tab-btn" onclick="switchTab('pinchhit')">Pinch Hit</button>
+            <button class="tab-btn" onclick="switchTab('rosters')">Rosters</button>
         </div>
 
         <!-- BASELINE VIEW -->
         <div id="baseline-view" class="view-section active">
-            <h2>📋 Baseline Lineup (Jamie's Formula)</h2>
+            <h2>📋 Baseline Lineup</h2>
             <div id="baseline-list"></div>
         </div>
 
         <!-- OPTIMIZED VIEW -->
         <div id="optimized-view" class="view-section">
-            <h2>🎯 Optimized Lineup (vs. Selected Pitcher)</h2>
+            <h2>🎯 Optimized Lineup</h2>
             <div id="scout-report" class="scout-note"></div>
             <div id="optimized-list" style="margin-top:15px;"></div>
         </div>
 
-        <!-- SETUP VIEW (DRAG AND DROP) -->
+        <!-- SETUP VIEW -->
         <div id="setup-view" class="view-section">
             <h2>⚙️ Set Active Lineup</h2>
-            <p style="font-size:0.8rem; color:#666;">Drag players between slots to reorder. Move players to/from Bench.</p>
-            
+            <p style="font-size:0.8rem; color:#666;">Drag players to reorder. Move to/from Bench.</p>
             <div class="dd-container">
-                <!-- Active Lineup Column -->
                 <div class="dd-column" id="active-list" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Active Lineup (1-9)</h3>
+                    <h3>Active (1-9)</h3>
                 </div>
-
-                <!-- Bench Column -->
                 <div class="dd-column" id="bench-list" ondrop="drop(event)" ondragover="allowDrop(event)">
                     <h3>Bench</h3>
                 </div>
             </div>
-            
             <button onclick="saveManualLineup()" style="margin-top:15px;">Save This Lineup</button>
         </div>
 
         <!-- PINCH HIT VIEW -->
         <div id="pinchhit-view" class="view-section">
             <h2>🔄 Pinch Hit / Substitution</h2>
+            <p style="font-size:0.8rem; color:#666;">Current Context: <span id="ph-context">Inning 1 vs. Parra</span></p>
             
-            <label><strong>1. Who is batting now? (Select Player to Replace)</strong></label>
+            <label><strong>Select Player to Replace:</strong></label>
             <select id="ph-slot-select">
-                <!-- Options populated dynamically -->
+                <!-- Populated dynamically -->
             </select>
 
             <button class="secondary" onclick="getPinchHitRecs()">Get Recommendations</button>
-
             <div id="ph-results" style="margin-top:15px;"></div>
+        </div>
+
+        <!-- ROSTERS VIEW -->
+        <div id="rosters-view" class="view-section">
+            <h2>📝 Manage Rosters</h2>
+            <p style="font-size:0.8rem; color:#666;">View current Boomers roster. To update Opponent rosters, edit the code or wait for future CSV import feature.</p>
+            <h3>Schaumburg Boomers (2026)</h3>
+            <ul id="boomers-roster-list" style="padding-left:20px; font-size:0.9rem;"></ul>
         </div>
     </div>
 
     <script>
-        // HARDCODED DATA FOR OFFLINE USE
-        const data = {
+        // --- DATA STRUCTURE ---
+        const seasonsData = {
           "boomers_roster": [
             {"name": "Alex Calarco", "hand": "S", "pos": "C", "stats": {"obp": 0.547, "bb_pct": 0.34, "sb": 0, "ba": 0.383, "slg": 0.596, "ops": 1.143, "k_pct": 0.15, "hi": 1.1, "as": 0.3}},
             {"name": "Myles Beale", "hand": "S", "pos": "OF", "stats": {"obp": 0.505, "bb_pct": 0.176, "sb": 19, "ba": 0.364, "slg": 0.564, "ops": 1.069, "k_pct": 0.093, "hi": 1.0, "as": 0.4}},
@@ -142,32 +157,39 @@
             {"name": "Cole Turney", "hand": "L", "pos": "OF", "stats": {"obp": 0.340, "bb_pct": 0.043, "sb": 0, "ba": 0.280, "slg": 0.550, "ops": 0.890, "k_pct": 0.348, "hi": 1.0, "as": 0.7}},
             {"name": "Tony Livermore", "hand": "L", "pos": "IF", "stats": {"obp": 0.216, "bb_pct": 0.065, "sb": 0, "ba": 0.171, "slg": 0.171, "ops": 0.388, "k_pct": 0.290, "hi": 0.8, "as": 0.6}}
           ],
-          "lec_pitching_matchups": {
-            "friday_may_8": {
-              "pitcher": "Andres Parra",
-              "hand": "LHP",
-              "weakness": "Inexperience, likely high walk rate.",
-              "recommendation": "Aggressive early counts. Test secondary pitches. Load up on Lefty Batters if they have high OBP."
+          "series": {
+            "lec_may_8": {
+              "opponent": "Lake Erie Crushers",
+              "pitchers": [
+                {"key": "parra", "name": "Andres Parra", "hand": "LHP", "weakness": "Inexperience", "rec": "Aggressive early counts."},
+                {"key": "scott", "name": "Brandon Scott", "hand": "LHP", "weakness": "Control issues", "rec": "Work deep counts."},
+                {"key": "foy", "name": "Corbin Foy", "hand": "RHP", "weakness": "Predictable mix", "rec": "Sit on Fastball."}
+              ]
             },
-            "saturday_may_9": {
-              "pitcher": "Brandon Scott",
-              "hand": "LHP",
-              "weakness": "Control issues. High Walk Rate.",
-              "recommendation": "Work deep counts. Force walks. Avoid chasing sliders out of zone."
+            "joliet_may_15": {
+              "opponent": "Joliet Slammers",
+              "pitchers": [
+                {"key": "j1", "name": "Joliet SP1", "hand": "RHP", "weakness": "High Walk Rate", "rec": "Wait for mistakes."},
+                {"key": "j2", "name": "Joliet SP2", "hand": "LHP", "weakness": "Low Velocity", "rec": "Pull the ball."},
+                {"key": "j3", "name": "Joliet SP3", "hand": "RHP", "weakness": "Heavy Slider", "rec": "Look for fastballs."}
+              ]
             },
-            "sunday_may_10": {
-              "pitcher": "Corbin Foy",
-              "hand": "RHP",
-              "weakness": "Predictable mix. Rarely throws Changeup/Sinker.",
-              "recommendation": "Do not chase Slider out of zone. Sit on Fastball. He gives up hard contact."
+            "windy_city_may_22": {
+              "opponent": "Windy City ThunderBolts",
+              "pitchers": [
+                {"key": "w1", "name": "Windy SP1", "hand": "LHP", "weakness": "TBD", "rec": "TBD"},
+                {"key": "w2", "name": "Windy SP2", "hand": "RHP", "weakness": "TBD", "rec": "TBD"},
+                {"key": "w3", "name": "Windy SP3", "hand": "RHP", "weakness": "TBD", "rec": "TBD"}
+              ]
             }
           }
         };
 
         // State Management
-        let manualLineup = []; // Array of 9 names
-        let manualBench = []; // Array of 3 names
+        let manualLineup = []; 
+        let manualBench = []; 
         let currentOptimizedLineup = []; 
+        let currentSeriesKey = "lec_may_8";
 
         function switchTab(tabName) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -177,12 +199,35 @@
             
             if(tabName === 'setup') renderDragDropInterface();
             if(tabName === 'pinchhit') updatePinchHitDropdown();
+            if(tabName === 'rosters') renderRosters();
+        }
+
+        function loadSeries() {
+            currentSeriesKey = document.getElementById('series-select').value;
+            const series = seasonsData.series[currentSeriesKey];
+            
+            // Populate Pitcher Dropdown
+            const pSelect = document.getElementById('pitcher-select');
+            pSelect.innerHTML = "";
+            series.pitchers.forEach(p => {
+                let opt = document.createElement('option');
+                opt.value = p.key;
+                opt.text = `${p.name} (${p.hand})`;
+                pSelect.add(opt);
+            });
+
+            // Reset Manual Lineup if changing series (optional, but keeps it clean)
+            // For now, we keep the lineup but regenerate optimizations
+            generateLineup();
         }
 
         function calculateMS(player, pitcherKey) {
             let ms = 50; 
-            const pitcherInfo = data.lec_pitching_matchups[pitcherKey];
+            const series = seasonsData.series[currentSeriesKey];
+            const pitcherInfo = series.pitchers.find(p => p.key === pitcherKey);
             
+            if (!pitcherInfo) return ms;
+
             if (pitcherInfo.hand === 'LHP') {
                 if (player.hand === 'R' || player.hand === 'S') ms += 10;
                 if (player.hand === 'L') ms -= 5;
@@ -203,12 +248,13 @@
 
         function generateLineup() {
             const pitcherKey = document.getElementById('pitcher-select').value;
-            const pitcherInfo = data.lec_pitching_matchups[pitcherKey];
+            const series = seasonsData.series[currentSeriesKey];
+            const pitcherInfo = series.pitchers.find(p => p.key === pitcherKey);
             
-            let roster = JSON.parse(JSON.stringify(data.boomers_roster));
+            let roster = JSON.parse(JSON.stringify(seasonsData.boomers_roster));
             roster.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
-            // --- BASELINE LOGIC ---
+            // --- BASELINE LOGIC (Same as before) ---
             let baseline = [];
             let remaining = [...roster];
             const getTop = (arr, sortFn) => arr.sort(sortFn)[0];
@@ -244,7 +290,6 @@
             // --- OPTIMIZED LOGIC ---
             let optimized = [];
             let optRemaining = [...roster];
-            
             const optSort = (fn) => (a,b) => fn(a,b) + (b.ms_score - a.ms_score);
 
             let o1 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*50 + b.stats.bb_pct*30 + b.stats.sb*0.5) - (a.stats.obp*50 + a.stats.bb_pct*30 + a.stats.sb*0.5)));
@@ -276,7 +321,6 @@
 
             currentOptimizedLineup = optimized; 
             
-            // Initialize Manual Lineup with Optimized Order if empty
             if(manualLineup.length === 0) {
                 manualLineup = optimized.map(o => o.player.name);
                 manualBench = roster.filter(p => !manualLineup.includes(p.name)).map(p => p.name);
@@ -285,11 +329,13 @@
             renderList(baseline, 'baseline-list');
             renderList(optimized, 'optimized-list');
             
-            document.getElementById('scout-report').innerHTML = `
-                <strong>Scout Report vs. ${pitcherInfo.pitcher} (${pitcherInfo.hand}):</strong><br>
-                ${pitcherInfo.recommendation}<br>
-                <em>Weakness: ${pitcherInfo.weakness}</em>
-            `;
+            if(pitcherInfo) {
+                document.getElementById('scout-report').innerHTML = `
+                    <strong>Scout Report vs. ${pitcherInfo.name} (${pitcherInfo.hand}):</strong><br>
+                    ${pitcherInfo.rec}<br>
+                    <em>Weakness: ${pitcherInfo.weakness}</em>
+                `;
+            }
         }
 
         function renderList(list, containerId) {
@@ -315,19 +361,16 @@
             document.getElementById(containerId).innerHTML = html;
         }
 
-        // --- DRAG AND DROP LOGIC ---
-
+        // --- DRAG AND DROP (Same as before) ---
         function renderDragDropInterface() {
             const activeContainer = document.getElementById('active-list');
             const benchContainer = document.getElementById('bench-list');
-            
-            activeContainer.innerHTML = '<h3>Active Lineup (1-9)</h3>';
+            activeContainer.innerHTML = '<h3>Active (1-9)</h3>';
             benchContainer.innerHTML = '<h3>Bench</h3>';
 
             for(let i=0; i<9; i++) {
                 let playerName = manualLineup[i] || "Empty";
-                let playerObj = data.boomers_roster.find(p => p.name === playerName);
-                
+                let playerObj = seasonsData.boomers_roster.find(p => p.name === playerName);
                 if(playerObj) {
                     let div = document.createElement('div');
                     div.className = 'draggable-item';
@@ -337,22 +380,12 @@
                     div.dataset.type = 'active';
                     div.dataset.index = i;
                     div.ondragstart = drag;
-                    
-                    div.innerHTML = `
-                        <div style="display:flex; align-items:center;">
-                            <span class="slot-badge">${i+1}</span>
-                            <div>
-                                <div style="font-weight:bold;">${playerObj.name}</div>
-                                <div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div>
-                            </div>
-                        </div>
-                    `;
+                    div.innerHTML = `<div style="display:flex; align-items:center;"><span class="slot-badge">${i+1}</span><div><div style="font-weight:bold;">${playerObj.name}</div><div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div></div></div>`;
                     activeContainer.appendChild(div);
                 }
             }
-
             manualBench.forEach(name => {
-                let playerObj = data.boomers_roster.find(p => p.name === name);
+                let playerObj = seasonsData.boomers_roster.find(p => p.name === name);
                 if(playerObj) {
                     let div = document.createElement('div');
                     div.className = 'draggable-item bench-item';
@@ -361,40 +394,25 @@
                     div.dataset.name = name;
                     div.dataset.type = 'bench';
                     div.ondragstart = drag;
-                    
-                    div.innerHTML = `
-                        <div style="display:flex; align-items:center;">
-                            <span class="slot-badge" style="background:#999;">B</span>
-                            <div>
-                                <div style="font-weight:bold;">${playerObj.name}</div>
-                                <div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div>
-                            </div>
-                        </div>
-                    `;
+                    div.innerHTML = `<div style="display:flex; align-items:center;"><span class="slot-badge" style="background:#999;">B</span><div><div style="font-weight:bold;">${playerObj.name}</div><div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div></div></div>`;
                     benchContainer.appendChild(div);
                 }
             });
         }
 
-        function allowDrop(ev) {
-            ev.preventDefault();
-        }
-
+        function allowDrop(ev) { ev.preventDefault(); }
         function drag(ev) {
             ev.dataTransfer.setData("text", ev.target.dataset.name);
             ev.dataTransfer.setData("type", ev.target.dataset.type);
             ev.dataTransfer.setData("index", ev.target.dataset.index);
         }
-
         function drop(ev) {
             ev.preventDefault();
             var dataName = ev.dataTransfer.getData("text");
             var dataType = ev.dataTransfer.getData("type");
             var dataIndex = ev.dataTransfer.getData("index");
-            
             var target = ev.target.closest('.draggable-item') || ev.target.closest('.dd-column');
             if(!target) return;
-            
             var targetType = target.dataset.type || (target.id === 'active-list' ? 'active' : 'bench');
             var targetIndex = target.dataset.index;
 
@@ -408,30 +426,29 @@
             } else if (dataType === 'bench' && targetType === 'active') {
                 let benchPlayer = dataName;
                 let activePlayer = manualLineup[targetIndex];
-                
                 manualLineup[targetIndex] = benchPlayer;
                 manualBench = manualBench.filter(n => n !== benchPlayer);
                 manualBench.push(activePlayer);
             }
-
             renderDragDropInterface();
         }
-
         function saveManualLineup() {
-            if(manualLineup.length !== 9) {
-                alert("Error: Lineup must have 9 players.");
-                return;
-            }
-            alert("Custom Lineup Saved! Use 'Pinch Hit' tab for subs.");
+            if(manualLineup.length !== 9) { alert("Error: Lineup must have 9 players."); return; }
+            alert("Custom Lineup Saved!");
             switchTab('pinchhit');
         }
 
         // --- PINCH HIT LOGIC ---
-
         function updatePinchHitDropdown() {
             const select = document.getElementById('ph-slot-select');
-            select.innerHTML = ""; // Clear existing
+            select.innerHTML = "";
+            const inning = document.getElementById('current-inning').value;
+            const pitcherKey = document.getElementById('pitcher-select').value;
+            const series = seasonsData.series[currentSeriesKey];
+            const pitcher = series.pitchers.find(p => p.key === pitcherKey);
             
+            document.getElementById('ph-context').innerText = `Inning ${inning} vs. ${pitcher ? pitcher.name : 'Unknown'}`;
+
             if(manualLineup.length !== 9) {
                 let option = document.createElement('option');
                 option.text = "Please save lineup first";
@@ -448,68 +465,39 @@
         }
 
         function getPinchHitRecs() {
-            if (manualLineup.length !== 9) {
-                alert("Please go to 'Setup Lineup' and save an active lineup first.");
-                switchTab('setup');
-                return;
-            }
-
+            if (manualLineup.length !== 9) { alert("Please save lineup first."); return; }
             const slotIndex = parseInt(document.getElementById('ph-slot-select').value);
             const pitcherKey = document.getElementById('pitcher-select').value;
-            
             let currentPlayerName = manualLineup[slotIndex];
-            let currentPlayer = data.boomers_roster.find(p => p.name === currentPlayerName);
+            let currentPlayer = seasonsData.boomers_roster.find(p => p.name === currentPlayerName);
 
-            let benchPlayers = data.boomers_roster.filter(p => manualBench.includes(p.name));
+            let benchPlayers = seasonsData.boomers_roster.filter(p => manualBench.includes(p.name));
             benchPlayers.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
             let sortedBench = [...benchPlayers].sort((a,b) => {
                 let scoreA = a.ms_score + (a.stats.hi * 10);
                 let scoreB = b.ms_score + (b.stats.hi * 10);
-                
-                if (slotIndex === 0 || slotIndex === 8) { 
-                    scoreA += a.stats.obp * 20;
-                    scoreB += b.stats.obp * 20;
-                }
-                if (slotIndex === 3) { 
-                    scoreA += a.stats.slg * 20;
-                    scoreB += b.stats.slg * 20;
-                }
-                
+                if (slotIndex === 0 || slotIndex === 8) { scoreA += a.stats.obp * 20; scoreB += b.stats.obp * 20; }
+                if (slotIndex === 3) { scoreA += a.stats.slg * 20; scoreB += b.stats.slg * 20; }
                 return scoreB - scoreA;
             });
 
             let topRec = sortedBench[0];
-            let runnerUp = sortedBench[1];
-
-            let html = `
-                <div class="rec-card">
-                    <div class="rec-title">✅ Top Recommendation: ${topRec.name} (${topRec.hand} ${topRec.pos})</div>
-                    <div style="margin-top:5px;">
-                        <strong>Why:</strong> Best Matchup (MS: ${Math.round(topRec.ms_score)}) and Hotness (HI: ${topRec.stats.hi}).<br>
-                        <strong>Stats vs Pitcher:</strong> OBP ${topRec.stats.obp} | SLG ${topRec.stats.slg}
-                    </div>
-                </div>
-            `;
-
-            if(runnerUp) {
-                html += `
-                    <div class="rec-card" style="background:#fff; border-color:#ddd;">
-                        <div class="rec-title" style="color:#555;">Alternative: ${runnerUp.name} (${runnerUp.hand} ${runnerUp.pos})</div>
-                        <div style="margin-top:5px; font-size:0.9rem;">
-                            MS: ${Math.round(runnerUp.ms_score)} | HI: ${runnerUp.stats.hi}
-                        </div>
-                    </div>
-                `;
-            }
-
+            let html = `<div class="rec-card"><div class="rec-title">✅ Rec: ${topRec.name} (${topRec.hand} ${topRec.pos})</div><div style="margin-top:5px;"><strong>Why:</strong> MS: ${Math.round(topRec.ms_score)} | HI: ${topRec.stats.hi}</div></div>`;
             html += `<p><strong>Replacing:</strong> Slot ${slotIndex+1} (${currentPlayer ? currentPlayer.name : 'Unknown'})</p>`;
-
             document.getElementById('ph-results').innerHTML = html;
         }
 
+        function renderRosters() {
+            let html = "";
+            seasonsData.boomers_roster.forEach(p => {
+                html += `<li>${p.name} (${p.pos}) - ${p.hand}</li>`;
+            });
+            document.getElementById('boomers-roster-list').innerHTML = html;
+        }
+
         window.onload = function() {
-            generateLineup();
+            loadSeries();
         };
     </script>
 </body>
