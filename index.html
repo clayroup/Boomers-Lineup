@@ -32,23 +32,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
         
-        /* Drag and Drop Styles */
-        .dd-container { display: flex; gap: 15px; flex-wrap: wrap; }
-        .dd-column { flex: 1; min-width: 140px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
-        .dd-column h3 { margin-top: 0; font-size: 0.9rem; text-align: center; color: #555; }
-        .draggable-item { 
-            background: white; border: 1px solid #ddd; padding: 8px; margin-bottom: 5px; 
-            border-radius: 6px; cursor: grab; display: flex; align-items: center; justify-content: space-between;
-            font-size: 0.9rem;
-        }
-        .draggable-item:active { cursor: grabbing; background: #eef; }
-        .draggable-item .slot-badge { 
-            background: #0056b3; color: white; font-weight: bold; 
-            width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; 
-            font-size: 0.8rem; margin-right: 8px;
-        }
-        .bench-item .slot-badge { background: #999; }
-        
         /* Pinch Hit Specifics */
         .ph-context-bar { background: #e7f3ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b3d7ff; }
         .ph-context-text { font-weight: bold; color: #0056b3; }
@@ -74,6 +57,12 @@
         .bench-section { margin-top: 20px; border-top: 2px dashed #eee; padding-top: 15px; }
         .bench-header { font-size: 0.9rem; font-weight: bold; color: #555; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .bench-rank { font-size: 0.8rem; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 5px; }
+        
+        /* Setup Dropdown Styles */
+        .slot-row { display: flex; align-items: center; margin-bottom: 12px; }
+        .slot-label { font-weight: bold; width: 60px; color: #0056b3; }
+        .slot-select { flex-grow: 1; }
+        .bench-preview { font-size: 0.85rem; color: #555; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 15px; border: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -138,18 +127,17 @@
             </div>
         </div>
 
-        <!-- SETUP VIEW -->
+        <!-- SETUP VIEW (DROPDOWNS) -->
         <div id="setup-view" class="view-section">
             <h2>⚙️ Set Active Lineup</h2>
-            <p style="font-size:0.8rem; color:#666;">Drag players to reorder. Move to/from Bench.</p>
-            <div class="dd-container">
-                <div class="dd-column" id="active-list" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Active (1-9)</h3>
-                </div>
-                <div class="dd-column" id="bench-list" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Bench</h3>
-                </div>
+            <p style="font-size:0.8rem; color:#666;">Select a player for each slot. Bench players are unselected.</p>
+            
+            <div id="slot-selectors"></div>
+            
+            <div id="bench-preview" class="bench-preview">
+                <strong>Bench Preview:</strong> <span id="bench-preview-text">Calculating...</span>
             </div>
+
             <button onclick="saveManualLineup()" style="margin-top:15px;">Save This Lineup</button>
         </div>
 
@@ -238,7 +226,7 @@
             document.getElementById(tabName + '-view').classList.add('active');
             event.target.classList.add('active');
             
-            if(tabName === 'setup') renderDragDropInterface();
+            if(tabName === 'setup') renderSetupView();
             if(tabName === 'pinchhit') updatePinchHitDropdown();
             if(tabName === 'rosters') renderRosters();
         }
@@ -347,7 +335,6 @@
             let optimizedBench = [...optRemaining].sort((a,b) => (b.ms_score + b.stats.hi*10) - (a.ms_score + a.stats.hi*10));
 
             // FORCE SYNC: Reset manual lineup to match the optimized lineup whenever pitcher/series changes.
-            // This prevents the "Split Brain" bug where Setup had different players than Baseline.
             manualLineup = optimized.map(o => o.player.name);
             manualBench = roster.filter(p => !manualLineup.includes(p.name)).map(p => p.name);
 
@@ -412,79 +399,76 @@
             document.getElementById(containerId).innerHTML = html;
         }
 
-        // --- DRAG AND DROP ---
-        function renderDragDropInterface() {
-            const activeContainer = document.getElementById('active-list');
-            const benchContainer = document.getElementById('bench-list');
-            activeContainer.innerHTML = '<h3>Active (1-9)</h3>';
-            benchContainer.innerHTML = '<h3>Bench</h3>';
-
-            for(let i=0; i<9; i++) {
-                let playerName = manualLineup[i] || "Empty";
-                let playerObj = seasonsData.boomers_roster.find(p => p.name === playerName);
-                if(playerObj) {
-                    let div = document.createElement('div');
-                    div.className = 'draggable-item';
-                    div.draggable = true;
-                    div.id = `active-${i}`;
-                    div.dataset.name = playerName;
-                    div.dataset.type = 'active';
-                    div.dataset.index = i;
-                    div.ondragstart = drag;
-                    div.innerHTML = `<div style="display:flex; align-items:center;"><span class="slot-badge">${i+1}</span><div><div style="font-weight:bold;">${playerObj.name}</div><div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div></div></div>`;
-                    activeContainer.appendChild(div);
-                }
+        // --- SETUP VIEW (DROPDOWNS) ---
+        function renderSetupView() {
+            const container = document.getElementById('slot-selectors');
+            container.innerHTML = '';
+            
+            const allPlayers = seasonsData.boomers_roster.map(p => p.name);
+            
+            for (let i = 0; i < 9; i++) {
+                const currentName = manualLineup[i] || "";
+                
+                const row = document.createElement('div');
+                row.className = 'slot-row';
+                
+                const label = document.createElement('div');
+                label.className = 'slot-label';
+                label.innerText = `Slot ${i + 1}`;
+                
+                const select = document.createElement('select');
+                select.className = 'slot-select';
+                
+                // Default option
+                let defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.text = "-- Select Player --";
+                select.add(defaultOpt);
+                
+                allPlayers.forEach(name => {
+                    let opt = document.createElement('option');
+                    opt.value = name;
+                    opt.text = name;
+                    if (name === currentName) opt.selected = true;
+                    select.add(opt);
+                });
+                
+                select.onchange = (e) => {
+                    manualLineup[i] = e.target.value;
+                    updateBenchPreview();
+                };
+                
+                row.appendChild(label);
+                row.appendChild(select);
+                container.appendChild(row);
             }
-            manualBench.forEach(name => {
-                let playerObj = seasonsData.boomers_roster.find(p => p.name === name);
-                if(playerObj) {
-                    let div = document.createElement('div');
-                    div.className = 'draggable-item bench-item';
-                    div.draggable = true;
-                    div.id = `bench-${name.replace(/\s/g, '')}`;
-                    div.dataset.name = name;
-                    div.dataset.type = 'bench';
-                    div.ondragstart = drag;
-                    div.innerHTML = `<div style="display:flex; align-items:center;"><span class="slot-badge" style="background:#999;">B</span><div><div style="font-weight:bold;">${playerObj.name}</div><div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div></div></div>`;
-                    benchContainer.appendChild(div);
-                }
-            });
+            updateBenchPreview();
         }
 
-        function allowDrop(ev) { ev.preventDefault(); }
-        function drag(ev) {
-            ev.dataTransfer.setData("text", ev.target.dataset.name);
-            ev.dataTransfer.setData("type", ev.target.dataset.type);
-            ev.dataTransfer.setData("index", ev.target.dataset.index);
+        function updateBenchPreview() {
+            const allPlayers = seasonsData.boomers_roster.map(p => p.name);
+            const bench = allPlayers.filter(p => !manualLineup.includes(p));
+            document.getElementById('bench-preview-text').innerText = bench.length > 0 ? bench.join(', ') : "None";
         }
-        function drop(ev) {
-            ev.preventDefault();
-            var dataName = ev.dataTransfer.getData("text");
-            var dataType = ev.dataTransfer.getData("type");
-            var dataIndex = ev.dataTransfer.getData("index");
-            var target = ev.target.closest('.draggable-item') || ev.target.closest('.dd-column');
-            if(!target) return;
-            var targetType = target.dataset.type || (target.id === 'active-list' ? 'active' : 'bench');
-            var targetIndex = target.dataset.index;
 
-            if (dataType === 'active' && targetType === 'active') {
-                let temp = manualLineup[dataIndex];
-                manualLineup[dataIndex] = manualLineup[targetIndex];
-                manualLineup[targetIndex] = temp;
-            } else if (dataType === 'active' && targetType === 'bench') {
-                let movedPlayer = manualLineup.splice(dataIndex, 1)[0];
-                manualBench.push(movedPlayer);
-            } else if (dataType === 'bench' && targetType === 'active') {
-                let benchPlayer = dataName;
-                let activePlayer = manualLineup[targetIndex];
-                manualLineup[targetIndex] = benchPlayer;
-                manualBench = manualBench.filter(n => n !== benchPlayer);
-                manualBench.push(activePlayer);
-            }
-            renderDragDropInterface();
-        }
         function saveManualLineup() {
-            if(manualLineup.length !== 9) { alert("Error: Lineup must have 9 players."); return; }
+            // Check for empty slots
+            if (manualLineup.some(p => p === "" || p === undefined)) {
+                alert("Please select a player for all 9 slots.");
+                return;
+            }
+            // Check for duplicates
+            let unique = new Set(manualLineup);
+            if (unique.size !== 9) {
+                alert("Error: You have selected the same player multiple times. Each slot must have a unique player.");
+                return;
+            }
+            
+            // Update Bench
+            manualBench = seasonsData.boomers_roster
+                .map(p => p.name)
+                .filter(name => !manualLineup.includes(name));
+                
             alert("Custom Lineup Saved!");
             switchTab('pinchhit');
         }
