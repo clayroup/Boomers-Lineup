@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTBDE Lineup Optimizer</title>
+    <title>RTBDE Manager</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; padding: 15px; margin: 0; }
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h1 { font-size: 1.2rem; color: #0056b3; margin-top: 0; text-align: center; }
         h2 { font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 0; }
+        h3 { font-size: 0.9rem; color: #555; margin-top: 10px; }
         select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; }
         button { background-color: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #004494; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #5a6268; }
         .lineup-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; align-items: center; }
         .slot-num { font-weight: bold; color: #0056b3; width: 30px; }
         .player-name { flex-grow: 1; font-weight: 500; }
@@ -23,37 +26,55 @@
         .badge-hi-cold { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .badge-as-high { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .badge-as-low { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab-btn { flex: 1; padding: 10px; background: #eee; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { flex: 1; min-width: 80px; padding: 10px; background: #eee; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
         .tab-btn.active { background: #0056b3; color: white; }
         .view-section { display: none; }
         .view-section.active { display: block; }
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
         th { background-color: #f9f9f9; }
+        .rec-card { background: #e7f3ff; border: 1px solid #b3d7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .rec-title { font-weight: bold; color: #0056b3; }
+        
+        /* Drag and Drop Styles */
+        .dd-container { display: flex; gap: 15px; flex-wrap: wrap; }
+        .dd-column { flex: 1; min-width: 140px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
+        .dd-column h3 { margin-top: 0; font-size: 0.9rem; text-align: center; color: #555; }
+        .draggable-item { 
+            background: white; border: 1px solid #ddd; padding: 8px; margin-bottom: 5px; 
+            border-radius: 6px; cursor: grab; display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        .draggable-item:active { cursor: grabbing; background: #eef; }
+        .draggable-item .slot-badge { 
+            background: #0056b3; color: white; font-weight: bold; 
+            width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; 
+            font-size: 0.8rem; margin-right: 8px;
+        }
+        .bench-item .slot-badge { background: #999; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>⚾ RTBDE Lineup Optimizer</h1>
+        <h1>⚾ RTBDE Manager</h1>
         <p style="text-align:center; color:#666; font-size:0.9rem;">Schaumburg Boomers vs. Lake Erie</p>
         
         <label for="pitcher-select"><strong>Select Opposing Pitcher:</strong></label>
-        <select id="pitcher-select">
+        <select id="pitcher-select" onchange="generateLineup()">
             <option value="friday_may_8">Friday: Andres Parra (LHP)</option>
             <option value="saturday_may_9">Saturday: Brandon Scott (LHP)</option>
             <option value="sunday_may_10">Sunday: Corbin Foy (RHP)</option>
         </select>
-
-        <button onclick="generateLineup()">Generate Lineups</button>
     </div>
 
     <div class="card">
         <div class="tab-buttons">
             <button class="tab-btn active" onclick="switchTab('baseline')">Baseline</button>
             <button class="tab-btn" onclick="switchTab('optimized')">Optimized</button>
-            <button class="tab-btn" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('setup')">Setup Lineup</button>
+            <button class="tab-btn" onclick="switchTab('pinchhit')">Pinch Hit</button>
         </div>
 
         <!-- BASELINE VIEW -->
@@ -69,22 +90,38 @@
             <div id="optimized-list" style="margin-top:15px;"></div>
         </div>
 
-        <!-- DASHBOARD VIEW -->
-        <div id="dashboard-view" class="view-section">
-            <h2>📊 Player Status Dashboard</h2>
-            <p style="font-size:0.8rem; color:#666;">Use this to manually tweak the lineup based on Hotness (HI) and Aggression (AS).</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Pos</th>
-                        <th>HI</th>
-                        <th>AS</th>
-                        <th>MS</th>
-                    </tr>
-                </thead>
-                <tbody id="dashboard-table"></tbody>
-            </table>
+        <!-- SETUP VIEW (DRAG AND DROP) -->
+        <div id="setup-view" class="view-section">
+            <h2>⚙️ Set Active Lineup</h2>
+            <p style="font-size:0.8rem; color:#666;">Drag players between slots to reorder. Move players to/from Bench.</p>
+            
+            <div class="dd-container">
+                <!-- Active Lineup Column -->
+                <div class="dd-column" id="active-list" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <h3>Active Lineup (1-9)</h3>
+                </div>
+
+                <!-- Bench Column -->
+                <div class="dd-column" id="bench-list" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <h3>Bench</h3>
+                </div>
+            </div>
+            
+            <button onclick="saveManualLineup()" style="margin-top:15px;">Save This Lineup</button>
+        </div>
+
+        <!-- PINCH HIT VIEW -->
+        <div id="pinchhit-view" class="view-section">
+            <h2>🔄 Pinch Hit / Substitution</h2>
+            
+            <label><strong>1. Who is batting now? (Select Player to Replace)</strong></label>
+            <select id="ph-slot-select">
+                <!-- Options populated dynamically -->
+            </select>
+
+            <button class="secondary" onclick="getPinchHitRecs()">Get Recommendations</button>
+
+            <div id="ph-results" style="margin-top:15px;"></div>
         </div>
     </div>
 
@@ -127,191 +164,353 @@
           }
         };
 
+        // State Management
+        let manualLineup = []; // Array of 9 names
+        let manualBench = []; // Array of 3 names
+        let currentOptimizedLineup = []; 
+
         function switchTab(tabName) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabName + '-view').classList.add('active');
             event.target.classList.add('active');
+            
+            if(tabName === 'setup') renderDragDropInterface();
+            if(tabName === 'pinchhit') updatePinchHitDropdown();
+        }
+
+        function calculateMS(player, pitcherKey) {
+            let ms = 50; 
+            const pitcherInfo = data.lec_pitching_matchups[pitcherKey];
+            
+            if (pitcherInfo.hand === 'LHP') {
+                if (player.hand === 'R' || player.hand === 'S') ms += 10;
+                if (player.hand === 'L') ms -= 5;
+                if (player.name === "Alec Craig") ms += 20; 
+                if (player.name === "Banks Tolley") ms += 15; 
+                if (player.name === "Kellum Clark") ms += 10; 
+            } else {
+                if (player.hand === 'L' || player.hand === 'S') ms += 10;
+                if (player.hand === 'R') ms -= 5;
+                if (player.name === "Anthony Calarco") ms += 10;
+                if (player.name === "Myles Beale") ms += 10;
+            }
+            
+            if (["Alex Calarco", "Anthony Calarco", "Kyle Fitzgerald"].includes(player.name)) ms += 5;
+            
+            return ms;
         }
 
         function generateLineup() {
             const pitcherKey = document.getElementById('pitcher-select').value;
             const pitcherInfo = data.lec_pitching_matchups[pitcherKey];
             
-            // Clone roster
             let roster = JSON.parse(JSON.stringify(data.boomers_roster));
+            roster.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
-            // Calculate MS for each player
-            roster.forEach(player => {
-                player.ms_score = 50; // Base score
-                
-                // Platoon Bonus
-                if (pitcherInfo.hand === 'LHP') {
-                    if (player.hand === 'R' || player.hand === 'S') player.ms_score += 10;
-                    if (player.hand === 'L') player.ms_score -= 5;
-                    // Specific H2H/Platoon Boosts for LHP
-                    if (player.name === "Alec Craig") player.ms_score += 20; // Elite vs LHP
-                    if (player.name === "Banks Tolley") player.ms_score += 15; // Strong vs LHP
-                    if (player.name === "Kellum Clark") player.ms_score += 10; // Power LHB vs LHP
-                } else {
-                    if (player.hand === 'L' || player.hand === 'S') player.ms_score += 10;
-                    if (player.hand === 'R') player.ms_score -= 5;
-                    // Specific Boosts for RHP
-                    if (player.name === "Anthony Calarco") player.ms_score += 10;
-                    if (player.name === "Myles Beale") player.ms_score += 10;
-                }
-
-                // H2H vs Lake Erie Boost
-                if (["Alex Calarco", "Anthony Calarco", "Kyle Fitzgerald"].includes(player.name)) {
-                    player.ms_score += 5;
-                }
-            });
-
-            // --- BASELINE LINEUP LOGIC (Jamie's Formula + Option A) ---
+            // --- BASELINE LOGIC ---
             let baseline = [];
             let remaining = [...roster];
+            const getTop = (arr, sortFn) => arr.sort(sortFn)[0];
+            const remove = (arr, item) => arr.filter(i => i !== item);
 
-            // Slot 1: Leadoff (High OBP/BB, SB Tiebreaker)
-            let s1 = [...remaining].sort((a,b) => (b.stats.obp * 50 + b.stats.bb_pct * 30 + b.stats.sb * 0.5) - (a.stats.obp * 50 + a.stats.bb_pct * 30 + a.stats.sb * 0.5))[0];
-            baseline.push({slot: 1, player: s1, reason: "Leadoff: High OBP/Walks"});
-            remaining = remaining.filter(p => p !== s1);
+            let s1 = getTop([...remaining], (a,b) => (b.stats.obp*50 + b.stats.bb_pct*30 + b.stats.sb*0.5) - (a.stats.obp*50 + a.stats.bb_pct*30 + a.stats.sb*0.5));
+            baseline.push({slot: 1, player: s1, reason: "Leadoff: High OBP/Walks"}); remaining = remove(remaining, s1);
+            
+            let s2 = getTop([...remaining], (a,b) => (b.stats.ba*40 + (1-b.stats.k_pct)*20) - (a.stats.ba*40 + (1-a.stats.k_pct)*20));
+            baseline.push({slot: 2, player: s2, reason: "Driver: High BA/Contact"}); remaining = remove(remaining, s2);
 
-            // Slot 2: Driver (High BA/Contact)
-            let s2 = [...remaining].sort((a,b) => (b.stats.ba * 40 + (1-b.stats.k_pct)*20) - (a.stats.ba * 40 + (1-a.stats.k_pct)*20))[0];
-            baseline.push({slot: 2, player: s2, reason: "Driver: High BA/Contact"});
-            remaining = remaining.filter(p => p !== s2);
+            let s3 = getTop([...remaining], (a,b) => b.stats.ops - a.stats.ops);
+            baseline.push({slot: 3, player: s3, reason: "Best Hitter: Highest OPS"}); remaining = remove(remaining, s3);
 
-            // Slot 3: Best Hitter (Highest OPS)
-            let s3 = [...remaining].sort((a,b) => b.stats.ops - a.stats.ops)[0];
-            baseline.push({slot: 3, player: s3, reason: "Best Hitter: Highest OPS"});
-            remaining = remaining.filter(p => p !== s3);
+            let s4 = getTop([...remaining], (a,b) => b.stats.slg - a.stats.slg);
+            baseline.push({slot: 4, player: s4, reason: "Power: Highest SLG"}); remaining = remove(remaining, s4);
 
-            // Slot 4: Power (Highest SLG)
-            let s4 = [...remaining].sort((a,b) => b.stats.slg - a.stats.slg)[0];
-            baseline.push({slot: 4, player: s4, reason: "Power: Highest SLG"});
-            remaining = remaining.filter(p => p !== s4);
+            let s5 = getTop([...remaining], (a,b) => (b.stats.obp*30 + b.stats.slg*20) - (a.stats.obp*30 + a.stats.slg*20));
+            baseline.push({slot: 5, player: s5, reason: "Protector: OBP/SLG Combo"}); remaining = remove(remaining, s5);
 
-            // Slot 5: Protector (High OBP/SLG)
-            let s5 = [...remaining].sort((a,b) => (b.stats.obp * 30 + b.stats.slg * 20) - (a.stats.obp * 30 + a.stats.slg * 20))[0];
-            baseline.push({slot: 5, player: s5, reason: "Protector: OBP/SLG Combo"});
-            remaining = remaining.filter(p => p !== s5);
+            let s6 = getTop([...remaining], (a,b) => (b.stats.ba*40 + (1-b.stats.k_pct)*30) - (a.stats.ba*40 + (1-a.stats.k_pct)*30));
+            baseline.push({slot: 6, player: s6, reason: "Contact: High BA/Low K%"}); remaining = remove(remaining, s6);
 
-            // Slot 6: Contact (High BA/Low K)
-            let s6 = [...remaining].sort((a,b) => (b.stats.ba * 40 + (1-b.stats.k_pct)*30) - (a.stats.ba * 40 + (1-a.stats.k_pct)*30))[0];
-            baseline.push({slot: 6, player: s6, reason: "Contact: High BA/Low K%"});
-            remaining = remaining.filter(p => p !== s6);
+            let s7 = getTop([...remaining], (a,b) => (b.stats.sb*2.0 + b.stats.obp*10) - (a.stats.sb*2.0 + a.stats.obp*10));
+            baseline.push({slot: 7, player: s7, reason: "Wildcard: Speed/SB Threat"}); remaining = remove(remaining, s7);
 
-            // Slot 7: Wildcard (Primary SB/Speed) - OPTION A
-            let s7 = [...remaining].sort((a,b) => (b.stats.sb * 2.0 + b.stats.obp * 10) - (a.stats.sb * 2.0 + a.stats.obp * 10))[0];
-            baseline.push({slot: 7, player: s7, reason: "Wildcard: Speed/SB Threat"});
-            remaining = remaining.filter(p => p !== s7);
+            let s8 = getTop([...remaining], (a,b) => (b.stats.obp*40 + (1-b.stats.k_pct)*20) - (a.stats.obp*40 + (1-a.stats.k_pct)*20));
+            baseline.push({slot: 8, player: s8, reason: "Bottom: OBP/Low K%"}); remaining = remove(remaining, s8);
 
-            // Slot 8: Bottom (High OBP/Low K)
-            let s8 = [...remaining].sort((a,b) => (b.stats.obp * 40 + (1-b.stats.k_pct)*20) - (a.stats.obp * 40 + (1-a.stats.k_pct)*20))[0];
-            baseline.push({slot: 8, player: s8, reason: "Bottom: OBP/Low K%"});
-            remaining = remaining.filter(p => p !== s8);
+            let s9 = getTop([...remaining], (a,b) => (b.stats.obp*40 + b.stats.sb*0.5) - (a.stats.obp*40 + a.stats.sb*0.5));
+            baseline.push({slot: 9, player: s9, reason: "2nd Leadoff: OBP/SB"}); 
 
-            // Slot 9: 2nd Leadoff (OBP/SB Tiebreaker) - OPTION A
-            let s9 = [...remaining].sort((a,b) => (b.stats.obp * 40 + b.stats.sb * 0.5) - (a.stats.obp * 40 + a.stats.sb * 0.5))[0];
-            baseline.push({slot: 9, player: s9, reason: "2nd Leadoff: OBP/SB"});
-            remaining = remaining.filter(p => p !== s9);
-
-            // --- OPTIMIZED LINEUP LOGIC (Uses MS Score) ---
+            // --- OPTIMIZED LOGIC ---
             let optimized = [];
             let optRemaining = [...roster];
+            
+            const optSort = (fn) => (a,b) => fn(a,b) + (b.ms_score - a.ms_score);
 
-            // Re-run slot logic but add MS Score to the sort
-            let o1 = [...optRemaining].sort((a,b) => (b.stats.obp * 50 + b.stats.bb_pct * 30 + b.stats.sb * 0.5 + b.ms_score) - (a.stats.obp * 50 + a.stats.bb_pct * 30 + a.stats.sb * 0.5 + a.ms_score))[0];
-            optimized.push({slot: 1, player: o1, reason: "Leadoff: High OBP + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o1);
+            let o1 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*50 + b.stats.bb_pct*30 + b.stats.sb*0.5) - (a.stats.obp*50 + a.stats.bb_pct*30 + a.stats.sb*0.5)));
+            optimized.push({slot: 1, player: o1, reason: "Leadoff: High OBP + Matchup"}); optRemaining = remove(optRemaining, o1);
 
-            let o2 = [...optRemaining].sort((a,b) => (b.stats.ba * 40 + (1-b.stats.k_pct)*20 + b.ms_score) - (a.stats.ba * 40 + (1-a.stats.k_pct)*20 + a.ms_score))[0];
-            optimized.push({slot: 2, player: o2, reason: "Driver: Contact + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o2);
+            let o2 = getTop([...optRemaining], optSort((a,b) => (b.stats.ba*40 + (1-b.stats.k_pct)*20) - (a.stats.ba*40 + (1-a.stats.k_pct)*20)));
+            optimized.push({slot: 2, player: o2, reason: "Driver: Contact + Matchup"}); optRemaining = remove(optRemaining, o2);
 
-            let o3 = [...optRemaining].sort((a,b) => (b.stats.ops * 40 + b.ms_score) - (a.stats.ops * 40 + a.ms_score))[0];
-            optimized.push({slot: 3, player: o3, reason: "Best Hitter: OPS + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o3);
+            let o3 = getTop([...optRemaining], optSort((a,b) => b.stats.ops - a.stats.ops));
+            optimized.push({slot: 3, player: o3, reason: "Best Hitter: OPS + Matchup"}); optRemaining = remove(optRemaining, o3);
 
-            let o4 = [...optRemaining].sort((a,b) => (b.stats.slg * 50 + b.ms_score) - (a.stats.slg * 50 + a.ms_score))[0];
-            optimized.push({slot: 4, player: o4, reason: "Power: SLG + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o4);
+            let o4 = getTop([...optRemaining], optSort((a,b) => b.stats.slg - a.stats.slg));
+            optimized.push({slot: 4, player: o4, reason: "Power: SLG + Matchup"}); optRemaining = remove(optRemaining, o4);
 
-            let o5 = [...optRemaining].sort((a,b) => (b.stats.obp * 30 + b.stats.slg * 20 + b.ms_score) - (a.stats.obp * 30 + a.stats.slg * 20 + a.ms_score))[0];
-            optimized.push({slot: 5, player: o5, reason: "Protector: OBP/SLG + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o5);
+            let o5 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*30 + b.stats.slg*20) - (a.stats.obp*30 + a.stats.slg*20)));
+            optimized.push({slot: 5, player: o5, reason: "Protector: OBP/SLG + Matchup"}); optRemaining = remove(optRemaining, o5);
 
-            let o6 = [...optRemaining].sort((a,b) => (b.stats.ba * 40 + (1-b.stats.k_pct)*30 + b.ms_score) - (a.stats.ba * 40 + (1-a.stats.k_pct)*30 + a.ms_score))[0];
-            optimized.push({slot: 6, player: o6, reason: "Contact: BA/Low K + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o6);
+            let o6 = getTop([...optRemaining], optSort((a,b) => (b.stats.ba*40 + (1-b.stats.k_pct)*30) - (a.stats.ba*40 + (1-a.stats.k_pct)*30)));
+            optimized.push({slot: 6, player: o6, reason: "Contact: BA/Low K + Matchup"}); optRemaining = remove(optRemaining, o6);
 
-            let o7 = [...optRemaining].sort((a,b) => (b.stats.sb * 2.0 + b.stats.obp * 10 + b.ms_score) - (a.stats.sb * 2.0 + a.stats.obp * 10 + a.ms_score))[0];
-            optimized.push({slot: 7, player: o7, reason: "Wildcard: Speed + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o7);
+            let o7 = getTop([...optRemaining], optSort((a,b) => (b.stats.sb*2.0 + b.stats.obp*10) - (a.stats.sb*2.0 + a.stats.obp*10)));
+            optimized.push({slot: 7, player: o7, reason: "Wildcard: Speed + Matchup"}); optRemaining = remove(optRemaining, o7);
 
-            let o8 = [...optRemaining].sort((a,b) => (b.stats.obp * 40 + (1-b.stats.k_pct)*20 + b.ms_score) - (a.stats.obp * 40 + (1-a.stats.k_pct)*20 + a.ms_score))[0];
-            optimized.push({slot: 8, player: o8, reason: "Bottom: OBP + Matchup"});
-            optRemaining = optRemaining.filter(p => p !== o8);
+            let o8 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*40 + (1-b.stats.k_pct)*20) - (a.stats.obp*40 + (1-a.stats.k_pct)*20)));
+            optimized.push({slot: 8, player: o8, reason: "Bottom: OBP + Matchup"}); optRemaining = remove(optRemaining, o8);
 
-            let o9 = [...optRemaining].sort((a,b) => (b.stats.obp * 40 + b.stats.sb * 0.5 + b.ms_score) - (a.stats.obp * 40 + a.stats.sb * 0.5 + a.ms_score))[0];
+            let o9 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*40 + b.stats.sb*0.5) - (a.stats.obp*40 + a.stats.sb*0.5)));
             optimized.push({slot: 9, player: o9, reason: "2nd Leadoff: OBP + Matchup"});
 
-            // --- RENDER FUNCTIONS ---
-            function renderList(list, containerId) {
-                let html = "";
-                list.forEach(item => {
-                    let p = item.player;
-                    let hiBadge = p.stats.hi > 1.1 ? '<span class="badge badge-hi-hot">🔥 Hot</span>' : (p.stats.hi < 0.9 ? '<span class="badge badge-hi-cold">❄️ Cold</span>' : '');
-                    let asBadge = p.stats.as > 0.6 ? '<span class="badge badge-as-high">⚡ Agg</span>' : (p.stats.as < 0.4 ? '<span class="badge badge-as-low">🛡️ Pass</span>' : '');
-                    
-                    html += `
-                        <div class="lineup-item">
-                            <span class="slot-num">${item.slot}.</span>
-                            <div style="flex-grow:1;">
-                                <span class="player-name">${p.name}</span>
-                                <span class="player-hand">${p.hand}</span>
-                                ${hiBadge} ${asBadge}
-                                <span class="reason">${item.reason}</span>
-                            </div>
-                            <small style="color:#888;">${p.pos}</small>
-                        </div>
-                    `;
-                });
-                document.getElementById(containerId).innerHTML = html;
+            currentOptimizedLineup = optimized; 
+            
+            // Initialize Manual Lineup with Optimized Order if empty
+            if(manualLineup.length === 0) {
+                manualLineup = optimized.map(o => o.player.name);
+                manualBench = roster.filter(p => !manualLineup.includes(p.name)).map(p => p.name);
             }
 
-            function renderDashboard(roster, pitcherKey) {
-                let html = "";
-                // Sort by MS for dashboard view
-                let sorted = [...roster].sort((a,b) => b.ms_score - a.ms_score);
-                sorted.forEach(p => {
-                    let hiBadge = p.stats.hi > 1.1 ? '<span class="badge badge-hi-hot">🔥</span>' : (p.stats.hi < 0.9 ? '<span class="badge badge-hi-cold">❄️</span>' : '–');
-                    let asText = p.stats.as > 0.6 ? 'High' : (p.stats.as < 0.4 ? 'Low' : 'Med');
-                    
-                    html += `
-                        <tr>
-                            <td><strong>${p.name}</strong> <span class="player-hand">${p.hand}</span></td>
-                            <td>${p.pos}</td>
-                            <td>${hiBadge} (${p.stats.hi})</td>
-                            <td>${asText} (${p.stats.as})</td>
-                            <td><strong>${Math.round(p.ms_score)}</strong></td>
-                        </tr>
-                    `;
-                });
-                document.getElementById('dashboard-table').innerHTML = html;
-            }
-
-            // Render Scout Report
+            renderList(baseline, 'baseline-list');
+            renderList(optimized, 'optimized-list');
+            
             document.getElementById('scout-report').innerHTML = `
                 <strong>Scout Report vs. ${pitcherInfo.pitcher} (${pitcherInfo.hand}):</strong><br>
                 ${pitcherInfo.recommendation}<br>
                 <em>Weakness: ${pitcherInfo.weakness}</em>
             `;
-
-            renderList(baseline, 'baseline-list');
-            renderList(optimized, 'optimized-list');
-            renderDashboard(roster, pitcherKey);
         }
+
+        function renderList(list, containerId) {
+            let html = "";
+            list.forEach(item => {
+                let p = item.player;
+                let hiBadge = p.stats.hi > 1.1 ? '<span class="badge badge-hi-hot">🔥 Hot</span>' : (p.stats.hi < 0.9 ? '<span class="badge badge-hi-cold">❄️ Cold</span>' : '');
+                let asBadge = p.stats.as > 0.6 ? '<span class="badge badge-as-high">⚡ Agg</span>' : (p.stats.as < 0.4 ? '<span class="badge badge-as-low">🛡️ Pass</span>' : '');
+                
+                html += `
+                    <div class="lineup-item">
+                        <span class="slot-num">${item.slot}.</span>
+                        <div style="flex-grow:1;">
+                            <span class="player-name">${p.name}</span>
+                            <span class="player-hand">${p.hand}</span>
+                            ${hiBadge} ${asBadge}
+                            <span class="reason">${item.reason}</span>
+                        </div>
+                        <small style="color:#888;">${p.pos}</small>
+                    </div>
+                `;
+            });
+            document.getElementById(containerId).innerHTML = html;
+        }
+
+        // --- DRAG AND DROP LOGIC ---
+
+        function renderDragDropInterface() {
+            const activeContainer = document.getElementById('active-list');
+            const benchContainer = document.getElementById('bench-list');
+            
+            activeContainer.innerHTML = '<h3>Active Lineup (1-9)</h3>';
+            benchContainer.innerHTML = '<h3>Bench</h3>';
+
+            for(let i=0; i<9; i++) {
+                let playerName = manualLineup[i] || "Empty";
+                let playerObj = data.boomers_roster.find(p => p.name === playerName);
+                
+                if(playerObj) {
+                    let div = document.createElement('div');
+                    div.className = 'draggable-item';
+                    div.draggable = true;
+                    div.id = `active-${i}`;
+                    div.dataset.name = playerName;
+                    div.dataset.type = 'active';
+                    div.dataset.index = i;
+                    div.ondragstart = drag;
+                    
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            <span class="slot-badge">${i+1}</span>
+                            <div>
+                                <div style="font-weight:bold;">${playerObj.name}</div>
+                                <div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div>
+                            </div>
+                        </div>
+                    `;
+                    activeContainer.appendChild(div);
+                }
+            }
+
+            manualBench.forEach(name => {
+                let playerObj = data.boomers_roster.find(p => p.name === name);
+                if(playerObj) {
+                    let div = document.createElement('div');
+                    div.className = 'draggable-item bench-item';
+                    div.draggable = true;
+                    div.id = `bench-${name.replace(/\s/g, '')}`;
+                    div.dataset.name = name;
+                    div.dataset.type = 'bench';
+                    div.ondragstart = drag;
+                    
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            <span class="slot-badge" style="background:#999;">B</span>
+                            <div>
+                                <div style="font-weight:bold;">${playerObj.name}</div>
+                                <div style="font-size:0.8rem; color:#666;">${playerObj.pos} | ${playerObj.hand}</div>
+                            </div>
+                        </div>
+                    `;
+                    benchContainer.appendChild(div);
+                }
+            });
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.dataset.name);
+            ev.dataTransfer.setData("type", ev.target.dataset.type);
+            ev.dataTransfer.setData("index", ev.target.dataset.index);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            var dataName = ev.dataTransfer.getData("text");
+            var dataType = ev.dataTransfer.getData("type");
+            var dataIndex = ev.dataTransfer.getData("index");
+            
+            var target = ev.target.closest('.draggable-item') || ev.target.closest('.dd-column');
+            if(!target) return;
+            
+            var targetType = target.dataset.type || (target.id === 'active-list' ? 'active' : 'bench');
+            var targetIndex = target.dataset.index;
+
+            if (dataType === 'active' && targetType === 'active') {
+                let temp = manualLineup[dataIndex];
+                manualLineup[dataIndex] = manualLineup[targetIndex];
+                manualLineup[targetIndex] = temp;
+            } else if (dataType === 'active' && targetType === 'bench') {
+                let movedPlayer = manualLineup.splice(dataIndex, 1)[0];
+                manualBench.push(movedPlayer);
+            } else if (dataType === 'bench' && targetType === 'active') {
+                let benchPlayer = dataName;
+                let activePlayer = manualLineup[targetIndex];
+                
+                manualLineup[targetIndex] = benchPlayer;
+                manualBench = manualBench.filter(n => n !== benchPlayer);
+                manualBench.push(activePlayer);
+            }
+
+            renderDragDropInterface();
+        }
+
+        function saveManualLineup() {
+            if(manualLineup.length !== 9) {
+                alert("Error: Lineup must have 9 players.");
+                return;
+            }
+            alert("Custom Lineup Saved! Use 'Pinch Hit' tab for subs.");
+            switchTab('pinchhit');
+        }
+
+        // --- PINCH HIT LOGIC ---
+
+        function updatePinchHitDropdown() {
+            const select = document.getElementById('ph-slot-select');
+            select.innerHTML = ""; // Clear existing
+            
+            if(manualLineup.length !== 9) {
+                let option = document.createElement('option');
+                option.text = "Please save lineup first";
+                select.add(option);
+                return;
+            }
+
+            manualLineup.forEach((playerName, index) => {
+                let option = document.createElement('option');
+                option.value = index;
+                option.text = `${index + 1}. ${playerName}`;
+                select.add(option);
+            });
+        }
+
+        function getPinchHitRecs() {
+            if (manualLineup.length !== 9) {
+                alert("Please go to 'Setup Lineup' and save an active lineup first.");
+                switchTab('setup');
+                return;
+            }
+
+            const slotIndex = parseInt(document.getElementById('ph-slot-select').value);
+            const pitcherKey = document.getElementById('pitcher-select').value;
+            
+            let currentPlayerName = manualLineup[slotIndex];
+            let currentPlayer = data.boomers_roster.find(p => p.name === currentPlayerName);
+
+            let benchPlayers = data.boomers_roster.filter(p => manualBench.includes(p.name));
+            benchPlayers.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
+
+            let sortedBench = [...benchPlayers].sort((a,b) => {
+                let scoreA = a.ms_score + (a.stats.hi * 10);
+                let scoreB = b.ms_score + (b.stats.hi * 10);
+                
+                if (slotIndex === 0 || slotIndex === 8) { 
+                    scoreA += a.stats.obp * 20;
+                    scoreB += b.stats.obp * 20;
+                }
+                if (slotIndex === 3) { 
+                    scoreA += a.stats.slg * 20;
+                    scoreB += b.stats.slg * 20;
+                }
+                
+                return scoreB - scoreA;
+            });
+
+            let topRec = sortedBench[0];
+            let runnerUp = sortedBench[1];
+
+            let html = `
+                <div class="rec-card">
+                    <div class="rec-title">✅ Top Recommendation: ${topRec.name} (${topRec.hand} ${topRec.pos})</div>
+                    <div style="margin-top:5px;">
+                        <strong>Why:</strong> Best Matchup (MS: ${Math.round(topRec.ms_score)}) and Hotness (HI: ${topRec.stats.hi}).<br>
+                        <strong>Stats vs Pitcher:</strong> OBP ${topRec.stats.obp} | SLG ${topRec.stats.slg}
+                    </div>
+                </div>
+            `;
+
+            if(runnerUp) {
+                html += `
+                    <div class="rec-card" style="background:#fff; border-color:#ddd;">
+                        <div class="rec-title" style="color:#555;">Alternative: ${runnerUp.name} (${runnerUp.hand} ${runnerUp.pos})</div>
+                        <div style="margin-top:5px; font-size:0.9rem;">
+                            MS: ${Math.round(runnerUp.ms_score)} | HI: ${runnerUp.stats.hi}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `<p><strong>Replacing:</strong> Slot ${slotIndex+1} (${currentPlayer ? currentPlayer.name : 'Unknown'})</p>`;
+
+            document.getElementById('ph-results').innerHTML = html;
+        }
+
+        window.onload = function() {
+            generateLineup();
+        };
     </script>
 </body>
 </html>
