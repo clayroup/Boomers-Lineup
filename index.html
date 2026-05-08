@@ -31,8 +31,6 @@
         .tab-btn.active { background: #0056b3; color: white; }
         .view-section { display: none; }
         .view-section.active { display: block; }
-        .rec-card { background: #e7f3ff; border: 1px solid #b3d7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-        .rec-title { font-weight: bold; color: #0056b3; }
         
         /* Drag and Drop Styles */
         .dd-container { display: flex; gap: 15px; flex-wrap: wrap; }
@@ -50,6 +48,19 @@
             font-size: 0.8rem; margin-right: 8px;
         }
         .bench-item .slot-badge { background: #999; }
+        
+        /* Pinch Hit Specifics */
+        .ph-context-bar { background: #e7f3ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b3d7ff; }
+        .ph-context-text { font-weight: bold; color: #0056b3; }
+        .rec-list-item { 
+            background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; 
+            border-radius: 8px; display: flex; align-items: center; 
+        }
+        .rec-rank { 
+            font-weight: bold; font-size: 1.2rem; color: #0056b3; width: 30px; 
+        }
+        .rec-details { flex-grow: 1; }
+        .rec-stats { font-size: 0.8rem; color: #666; }
         .inning-input { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
         .inning-input label { width: auto; margin-bottom: 0; }
         .inning-input input { width: 60px; margin-bottom: 0; }
@@ -60,24 +71,13 @@
     <div class="card">
         <h1>⚾ RTBDE Season Manager</h1>
         
-        <!-- SERIES SELECTOR -->
+        <!-- SERIES SELECTOR (Always Visible) -->
         <label><strong>Select Series:</strong></label>
         <select id="series-select" onchange="loadSeries()">
             <option value="lec_may_8">vs. Lake Erie (May 8-10)</option>
             <option value="joliet_may_15">vs. Joliet Slammers (May 15-17)</option>
             <option value="windy_city_may_22">vs. Windy City (May 22-24)</option>
         </select>
-
-        <!-- GAME CONTEXT -->
-        <div class="inning-input">
-            <label><strong>Inning:</strong></label>
-            <input type="number" id="current-inning" value="1" min="1" max="9">
-            
-            <label style="margin-left:10px;"><strong>Opposing Pitcher:</strong></label>
-            <select id="pitcher-select" style="flex-grow:1;">
-                <!-- Populated dynamically -->
-            </select>
-        </div>
     </div>
 
     <div class="card">
@@ -120,22 +120,39 @@
         <!-- PINCH HIT VIEW -->
         <div id="pinchhit-view" class="view-section">
             <h2>🔄 Pinch Hit / Substitution</h2>
-            <p style="font-size:0.8rem; color:#666;">Current Context: <span id="ph-context">Inning 1 vs. Parra</span></p>
             
+            <!-- CONTEXT BAR (Only visible here) -->
+            <div class="ph-context-bar">
+                <div class="inning-input">
+                    <label><strong>Inning:</strong></label>
+                    <input type="number" id="current-inning" value="1" min="1" max="9" onchange="updatePinchHitDropdown()">
+                    
+                    <label style="margin-left:10px;"><strong>Pitcher:</strong></label>
+                    <select id="pitcher-select" style="flex-grow:1;" onchange="updatePinchHitDropdown()">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="ph-context-text" id="ph-context-display">
+                    Context: Inning 1 vs. Unknown
+                </div>
+            </div>
+
             <label><strong>Select Player to Replace:</strong></label>
             <select id="ph-slot-select">
                 <!-- Populated dynamically -->
             </select>
 
             <button class="secondary" onclick="getPinchHitRecs()">Get Recommendations</button>
-            <div id="ph-results" style="margin-top:15px;"></div>
+            
+            <div id="ph-results" style="margin-top:15px;">
+                <!-- Ranked List Appears Here -->
+            </div>
         </div>
 
         <!-- ROSTERS VIEW -->
         <div id="rosters-view" class="view-section">
             <h2>📝 Manage Rosters</h2>
-            <p style="font-size:0.8rem; color:#666;">View current Boomers roster. To update Opponent rosters, edit the code or wait for future CSV import feature.</p>
-            <h3>Schaumburg Boomers (2026)</h3>
+            <p style="font-size:0.8rem; color:#666;">View current Boomers roster.</p>
             <ul id="boomers-roster-list" style="padding-left:20px; font-size:0.9rem;"></ul>
         </div>
     </div>
@@ -216,8 +233,6 @@
                 pSelect.add(opt);
             });
 
-            // Reset Manual Lineup if changing series (optional, but keeps it clean)
-            // For now, we keep the lineup but regenerate optimizations
             generateLineup();
         }
 
@@ -254,7 +269,7 @@
             let roster = JSON.parse(JSON.stringify(seasonsData.boomers_roster));
             roster.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
-            // --- BASELINE LOGIC (Same as before) ---
+            // --- BASELINE LOGIC ---
             let baseline = [];
             let remaining = [...roster];
             const getTop = (arr, sortFn) => arr.sort(sortFn)[0];
@@ -361,7 +376,7 @@
             document.getElementById(containerId).innerHTML = html;
         }
 
-        // --- DRAG AND DROP (Same as before) ---
+        // --- DRAG AND DROP ---
         function renderDragDropInterface() {
             const activeContainer = document.getElementById('active-list');
             const benchContainer = document.getElementById('bench-list');
@@ -447,7 +462,8 @@
             const series = seasonsData.series[currentSeriesKey];
             const pitcher = series.pitchers.find(p => p.key === pitcherKey);
             
-            document.getElementById('ph-context').innerText = `Inning ${inning} vs. ${pitcher ? pitcher.name : 'Unknown'}`;
+            // Update Context Bar Text
+            document.getElementById('ph-context-display').innerText = `Context: Inning ${inning} vs. ${pitcher ? pitcher.name : 'Unknown'}`;
 
             if(manualLineup.length !== 9) {
                 let option = document.createElement('option');
@@ -474,6 +490,7 @@
             let benchPlayers = seasonsData.boomers_roster.filter(p => manualBench.includes(p.name));
             benchPlayers.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
+            // Rank Bench Players
             let sortedBench = [...benchPlayers].sort((a,b) => {
                 let scoreA = a.ms_score + (a.stats.hi * 10);
                 let scoreB = b.ms_score + (b.stats.hi * 10);
@@ -482,9 +499,29 @@
                 return scoreB - scoreA;
             });
 
-            let topRec = sortedBench[0];
-            let html = `<div class="rec-card"><div class="rec-title">✅ Rec: ${topRec.name} (${topRec.hand} ${topRec.pos})</div><div style="margin-top:5px;"><strong>Why:</strong> MS: ${Math.round(topRec.ms_score)} | HI: ${topRec.stats.hi}</div></div>`;
-            html += `<p><strong>Replacing:</strong> Slot ${slotIndex+1} (${currentPlayer ? currentPlayer.name : 'Unknown'})</p>`;
+            // Render Ranked List
+            let html = `<h3>Recommended Subs (Ranked):</h3>`;
+            
+            sortedBench.forEach((p, index) => {
+                let hiBadge = p.stats.hi > 1.1 ? '<span class="badge badge-hi-hot">🔥 Hot</span>' : (p.stats.hi < 0.9 ? '<span class="badge badge-hi-cold">❄️ Cold</span>' : '');
+                
+                html += `
+                    <div class="rec-list-item">
+                        <div class="rec-rank">#${index + 1}</div>
+                        <div class="rec-details">
+                            <div style="font-weight:bold;">${p.name} <span class="player-hand">${p.hand}</span> ${hiBadge}</div>
+                            <div class="rec-stats">
+                                <strong>MS:</strong> ${Math.round(p.ms_score)} | 
+                                <strong>HI:</strong> ${p.stats.hi} | 
+                                <strong>OBP:</strong> ${p.stats.obp} | 
+                                <strong>SLG:</strong> ${p.stats.slg}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `<p style="margin-top:10px; font-size:0.9rem;"><strong>Replacing:</strong> Slot ${slotIndex+1} (${currentPlayer ? currentPlayer.name : 'Unknown'})</p>`;
             document.getElementById('ph-results').innerHTML = html;
         }
 
