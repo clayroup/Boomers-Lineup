@@ -18,7 +18,11 @@
         .player-hand { font-size: 0.8rem; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
         .reason { font-size: 0.75rem; color: #555; display: block; margin-top: 2px; }
         .scout-note { background-color: #fff3cd; padding: 10px; border-radius: 8px; border-left: 5px solid #ffc107; margin-top: 10px; font-size: 0.9rem; }
-        .error { color: red; text-align: center; padding: 10px; }
+        .badge { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 5px; }
+        .badge-hi-hot { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .badge-hi-cold { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .badge-as-high { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .badge-as-low { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
     </style>
 </head>
 <body>
@@ -44,106 +48,116 @@
         const data = {
           "team": "Schaumburg Boomers",
           "opponent": "Lake Erie Crushers",
-          "jamie_rules": {
-            "leadoff_criteria": "High OBP or Contact Rate",
-            "no_consecutive_aggressive": true,
-            "prefer_lefty_vs_righty_pitcher": true,
-            "cleanup_power": true
-          },
-          "boomers_roster": {
-            "catchers": [
-              {"name": "Alex Calarco", "hand": "S", "pos": "C", "status": "Pro-1", "notes": "Switch hitter."},
-              {"name": "Jeff Nicol", "hand": "R", "pos": "C", "status": "Pro-2", "notes": "Righty bat."}
-            ],
-            "infielders": [
-              {"name": "Kyle Fitzgerald", "hand": "R", "pos": "IF", "status": "Exp-2", "notes": "Veteran."},
-              {"name": "Alec Craig", "hand": "L", "pos": "IF", "status": "Vet", "notes": "Lefty bat."},
-              {"name": "Will Prater", "hand": "L", "pos": "IF", "status": "Exp-2", "notes": "Lefty bat."},
-              {"name": "Anthony Calarco", "hand": "L", "pos": "IF", "status": "Pro-2", "notes": "Lefty power."},
-              {"name": "Tony Livermore", "hand": "L", "pos": "IF", "status": "Pro-1", "notes": "Lefty contact."}
-            ],
-            "outfielders": [
-              {"name": "Christian Fedko", "hand": "L", "pos": "OF", "status": "Exp-2", "notes": "Lefty bat."},
-              {"name": "Banks Tolley", "hand": "R", "pos": "OF", "status": "Pro-2", "notes": "Righty bat."},
-              {"name": "Myles Beale", "hand": "S", "pos": "OF", "status": "Pro-1", "notes": "Switch hitter."},
-              {"name": "Kellum Clark", "hand": "L", "pos": "OF", "status": "Exp-1", "notes": "Lefty bat."},
-              {"name": "Cole Turney", "hand": "L", "pos": "OF", "status": "Pro-1", "notes": "Lefty bat."}
-            ]
-          },
+          "boomers_roster": [
+            {"name": "Alex Calarco", "hand": "S", "pos": "C", "stats": {"obp": 0.547, "bb_pct": 0.34, "sb": 0, "ba": 0.383, "slg": 0.596, "ops": 1.143, "k_pct": 0.15, "hi": 1.1, "as": 0.3}},
+            {"name": "Kyle Fitzgerald", "hand": "R", "pos": "IF", "stats": {"obp": 0.383, "bb_pct": 0.12, "sb": 11, "ba": 0.281, "slg": 0.455, "ops": 0.838, "k_pct": 0.21, "hi": 1.0, "as": 0.5}},
+            {"name": "Anthony Calarco", "hand": "L", "pos": "IF", "stats": {"obp": 0.434, "bb_pct": 0.12, "sb": 3, "ba": 0.347, "slg": 0.627, "ops": 1.061, "k_pct": 0.15, "hi": 0.9, "as": 0.6}},
+            {"name": "Banks Tolley", "hand": "R", "pos": "OF", "stats": {"obp": 0.412, "bb_pct": 0.12, "sb": 2, "ba": 0.313, "slg": 0.515, "ops": 0.928, "k_pct": 0.19, "hi": 1.0, "as": 0.5}},
+            {"name": "Christian Fedko", "hand": "L", "pos": "OF", "stats": {"obp": 0.393, "bb_pct": 0.13, "sb": 11, "ba": 0.279, "slg": 0.400, "ops": 0.793, "k_pct": 0.10, "hi": 1.0, "as": 0.4}},
+            {"name": "Myles Beale", "hand": "S", "pos": "OF", "stats": {"obp": 0.350, "bb_pct": 0.10, "sb": 8, "ba": 0.260, "slg": 0.400, "ops": 0.750, "k_pct": 0.20, "hi": 1.2, "as": 0.6}}, // Estimated stats for Pro-1 speedster
+            {"name": "Will Prater", "hand": "L", "pos": "IF", "stats": {"obp": 0.347, "bb_pct": 0.09, "sb": 7, "ba": 0.274, "slg": 0.363, "ops": 0.710, "k_pct": 0.18, "hi": 1.0, "as": 0.5}},
+            {"name": "Alec Craig", "hand": "L", "pos": "IF", "stats": {"obp": 0.427, "bb_pct": 0.21, "sb": 11, "ba": 0.258, "slg": 0.320, "ops": 0.747, "k_pct": 0.13, "hi": 0.8, "as": 0.3}},
+            {"name": "Jeff Nicol", "hand": "R", "pos": "C", "stats": {"obp": 0.360, "bb_pct": 0.10, "sb": 1, "ba": 0.270, "slg": 0.400, "ops": 0.760, "k_pct": 0.20, "hi": 1.0, "as": 0.5}} // Estimated stats
+          ],
           "lec_pitching_matchups": {
             "friday_may_8": {
               "pitcher": "Andres Parra",
-              "number": 32,
               "hand": "LHP",
-              "confidence": "Low",
               "weakness": "Inexperience, likely high walk rate.",
               "recommendation": "Aggressive early counts. Test secondary pitches. Load up on Lefty Batters if they have high OBP."
             },
             "saturday_may_9": {
               "pitcher": "Brandon Scott",
-              "number": 12,
               "hand": "LHP",
-              "confidence": "Medium",
               "weakness": "Control issues. High Walk Rate.",
               "recommendation": "Work deep counts. Force walks. Avoid chasing sliders out of zone."
             },
             "sunday_may_10": {
               "pitcher": "Corbin Foy",
-              "number": 26,
               "hand": "RHP",
-              "confidence": "High",
               "weakness": "Predictable mix. Rarely throws Changeup/Sinker.",
               "recommendation": "Do not chase Slider out of zone. Sit on Fastball. He gives up hard contact."
             }
           }
         };
 
-        let rosterData = data.boomers_roster;
-        let matchupData = data.lec_pitching_matchups;
-
         function generateLineup() {
             const pitcherKey = document.getElementById('pitcher-select').value;
-            const pitcherInfo = matchupData[pitcherKey];
+            const pitcherInfo = data.lec_pitching_matchups[pitcherKey];
             
-            if (!pitcherInfo) {
-                alert("Pitcher data not found.");
-                return;
-            }
+            // Clone roster to avoid modifying original
+            let roster = JSON.parse(JSON.stringify(data.boomers_roster));
 
-            // 1. Gather all batters
-            let allBatters = [
-                ...rosterData.catchers.map(p => ({...p, role: 'C'})),
-                ...rosterData.infielders.map(p => ({...p, role: 'IF'})),
-                ...rosterData.outfielders.map(p => ({...p, role: 'OF'}))
-            ];
-
-            // 2. Score Batters based on Hand Matchup & Simple Logic
-            allBatters.forEach(batter => {
-                batter.score = 0;
+            // Apply Platoon & Matchup Scoring
+            roster.forEach(player => {
+                player.ms_score = 0;
                 
-                // Hand Advantage Logic
+                // Platoon Bonus
                 if (pitcherInfo.hand === 'LHP') {
-                    if (batter.hand === 'R' || batter.hand === 'S') batter.score += 10; // Righties hit LHP better
-                    if (batter.hand === 'L') batter.score -= 5; // Lefties struggle vs LHP (generally)
-                } else if (pitcherInfo.hand === 'RHP') {
-                    if (batter.hand === 'L' || batter.hand === 'S') batter.score += 10; // Lefties hit RHP better
-                    if (batter.hand === 'R') batter.score -= 5;
+                    if (player.hand === 'R' || player.hand === 'S') player.ms_score += 10;
+                    if (player.hand === 'L') player.ms_score -= 5;
+                    // Specific H2H/Platoon Boosts for LHP
+                    if (player.name === "Alec Craig") player.ms_score += 15; // Elite vs LHP
+                    if (player.name === "Banks Tolley") player.ms_score += 10; // Strong vs LHP
+                } else {
+                    if (player.hand === 'L' || player.hand === 'S') player.ms_score += 10;
+                    if (player.hand === 'R') player.ms_score -= 5;
                 }
 
-                // Veteran/Experience Bonus (Simple proxy for skill until stats are added)
-                if (batter.status.includes('Vet') || batter.status.includes('Exp')) batter.score += 5;
-                
-                // Randomize slightly to break ties
-                batter.score += Math.random() * 2;
+                // H2H vs Lake Erie Boost (Simulated based on 2025 data)
+                if (["Alex Calarco", "Anthony Calarco", "Kyle Fitzgerald"].includes(player.name)) {
+                    player.ms_score += 5;
+                }
             });
 
-            // 3. Sort by Score (Highest First)
-            allBatters.sort((a, b) => b.score - a.score);
+            // Sort for each slot based on Jamie's Formula + Option A (SBs)
+            let lineup = [];
+            
+            // Slot 1: Leadoff (High OBP/BB, SB Tiebreaker)
+            let slot1 = [...roster].sort((a,b) => (b.stats.obp * 50 + b.stats.bb_pct * 30 + b.stats.sb * 0.5 + b.ms_score) - (a.stats.obp * 50 + a.stats.bb_pct * 30 + a.stats.sb * 0.5 + a.ms_score))[0];
+            lineup.push({slot: 1, player: slot1, reason: "Leadoff: High OBP/Walks"});
 
-            // 4. Select Top 9
-            const bestNine = allBatters.slice(0, 9);
+            // Slot 2: Driver (High BA/Contact)
+            let remaining = roster.filter(p => p !== slot1);
+            let slot2 = [...remaining].sort((a,b) => (b.stats.ba * 40 + (1-b.stats.k_pct)*20 + b.ms_score) - (a.stats.ba * 40 + (1-a.stats.k_pct)*20 + a.ms_score))[0];
+            lineup.push({slot: 2, player: slot2, reason: "Driver: High BA/Contact"});
 
-            // 5. Display Results
+            // Slot 3: Best Hitter (Highest OPS)
+            remaining = remaining.filter(p => p !== slot2);
+            let slot3 = [...remaining].sort((a,b) => (b.stats.ops * 40 + b.ms_score) - (a.stats.ops * 40 + a.ms_score))[0];
+            lineup.push({slot: 3, player: slot3, reason: "Best Hitter: Highest OPS"});
+
+            // Slot 4: Power (Highest SLG/ISO)
+            remaining = remaining.filter(p => p !== slot3);
+            let slot4 = [...remaining].sort((a,b) => (b.stats.slg * 50 + b.ms_score) - (a.stats.slg * 50 + a.ms_score))[0];
+            lineup.push({slot: 4, player: slot4, reason: "Power: Highest SLG"});
+
+            // Slot 5: Protector (High OBP/SLG)
+            remaining = remaining.filter(p => p !== slot4);
+            let slot5 = [...remaining].sort((a,b) => (b.stats.obp * 30 + b.stats.slg * 20 + b.ms_score) - (a.stats.obp * 30 + a.stats.slg * 20 + a.ms_score))[0];
+            lineup.push({slot: 5, player: slot5, reason: "Protector: OBP/SLG Combo"});
+
+            // Slot 6: Contact (High BA/Low K)
+            remaining = remaining.filter(p => p !== slot5);
+            let slot6 = [...remaining].sort((a,b) => (b.stats.ba * 40 + (1-b.stats.k_pct)*30 + b.ms_score) - (a.stats.ba * 40 + (1-a.stats.k_pct)*30 + a.ms_score))[0];
+            lineup.push({slot: 6, player: slot6, reason: "Contact: High BA/Low K%"});
+
+            // Slot 7: Wildcard (Primary SB/Speed) - OPTION A
+            remaining = remaining.filter(p => p !== slot6);
+            let slot7 = [...remaining].sort((a,b) => (b.stats.sb * 2.0 + b.stats.obp * 10 + b.ms_score) - (a.stats.sb * 2.0 + a.stats.obp * 10 + a.ms_score))[0];
+            lineup.push({slot: 7, player: slot7, reason: "Wildcard: Speed/SB Threat"});
+
+            // Slot 8: Bottom (High OBP/Low K)
+            remaining = remaining.filter(p => p !== slot7);
+            let slot8 = [...remaining].sort((a,b) => (b.stats.obp * 40 + (1-b.stats.k_pct)*20 + b.ms_score) - (a.stats.obp * 40 + (1-a.stats.k_pct)*20 + a.ms_score))[0];
+            lineup.push({slot: 8, player: slot8, reason: "Bottom: OBP/Low K%"});
+
+            // Slot 9: 2nd Leadoff (OBP/SB Tiebreaker) - OPTION A
+            remaining = remaining.filter(p => p !== slot8);
+            let slot9 = [...remaining].sort((a,b) => (b.stats.obp * 40 + b.stats.sb * 0.5 + b.ms_score) - (a.stats.obp * 40 + a.stats.sb * 0.5 + a.ms_score))[0];
+            lineup.push({slot: 9, player: slot9, reason: "2nd Leadoff: OBP/SB"});
+
+            // Display Results
             let html = `
                 <div class="card">
                     <h2>🎯 Optimal Lineup vs. ${pitcherInfo.pitcher} (${pitcherInfo.hand})</h2>
@@ -154,35 +168,26 @@
                     <div style="margin-top:15px;">
             `;
 
-            bestNine.forEach((player, index) => {
-                let reason = "";
-                if (pitcherInfo.hand === 'LHP' && (player.hand === 'R' || player.hand === 'S')) reason = "Righty advantage vs LHP";
-                else if (pitcherInfo.hand === 'RHP' && (player.hand === 'L' || player.hand === 'S')) reason = "Lefty advantage vs RHP";
-                else reason = "Best available option";
+            lineup.forEach(item => {
+                let p = item.player;
+                let hiBadge = p.stats.hi > 1.1 ? '<span class="badge badge-hi-hot">🔥 Hot</span>' : (p.stats.hi < 0.9 ? '<span class="badge badge-hi-cold">❄️ Cold</span>' : '');
+                let asBadge = p.stats.as > 0.6 ? '<span class="badge badge-as-high">⚡ Agg</span>' : (p.stats.as < 0.4 ? '<span class="badge badge-as-low">🛡️ Pass</span>' : '');
 
                 html += `
                     <div class="lineup-item">
-                        <span class="slot-num">${index + 1}.</span>
+                        <span class="slot-num">${item.slot}.</span>
                         <div style="flex-grow:1;">
-                            <span class="player-name">${player.name}</span>
-                            <span class="player-hand">${player.hand}</span>
-                            <span class="reason">${reason}</span>
+                            <span class="player-name">${p.name}</span>
+                            <span class="player-hand">${p.hand}</span>
+                            ${hiBadge} ${asBadge}
+                            <span class="reason">${item.reason}</span>
                         </div>
-                        <small style="color:#888;">${player.pos}</small>
+                        <small style="color:#888;">${p.pos}</small>
                     </div>
                 `;
             });
 
             html += `</div></div>`;
-            
-            // Add Bench Recommendations
-            const bench = allBatters.slice(9, 12);
-            html += `<div class="card"><h2>📋 Recommended Bench</h2>`;
-            bench.forEach(player => {
-                html += `<div class="lineup-item"><span class="player-name">${player.name}</span> <span class="player-hand">${player.hand}</span> <small>${player.pos}</small></div>`;
-            });
-            html += `</div>`;
-
             document.getElementById('results-area').innerHTML = html;
         }
     </script>
