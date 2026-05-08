@@ -230,290 +230,6 @@
         // State Management
         let manualLineup = []; 
         let manualBench = []; 
-        let currentOptimizedLineup = []; 
-        let currentSeriesKey = "lec_may_8";
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabName + '-view').classList.add('active');
-            event.target.classList.add('active');
-            
-            if(tabName === 'setup') renderDragDropInterface();
-            if(tabName === 'pinchhit') updatePinchHitDropdown();
-            if(tabName === 'rosters') renderRosters();
-        }
-
-        function loadSeries() {
-            currentSeriesKey = document.getElementById('series-select').value;
-            const series = seasonsData.series[currentSeriesKey];
-            
-            // Populate Pitcher Dropdown
-            const pSelect = document.getElementById('pitcher-select');
-            pSelect.innerHTML = "";
-            series.pitchers.forEach(p => {
-                let opt = document.createElement('option');
-                opt.value = p.key;
-                opt.text = `${p.name} (${p.hand})`;
-                pSelect.add(opt);
-            });
-
-            generateLineup();
-        }
-
-        function calculateMS(player, pitcherKey) {
-            let ms = 50; 
-            const series = seasonsData.series[currentSeriesKey];
-            const pitcherInfo = series.pitchers.find(p => p.key === pitcherKey);
-            
-            if (!pitcherInfo) return ms;
-
-            if (pitcherInfo.hand === 'LHP') {
-                if (player.hand === 'R' || player.hand === 'SYou are right. I apologize for the oversight. In the previous code, `Will Prater` was included in the roster data, but because the logic simply takes the "Top 9" for the lineup and "The Rest" for the bench, if he wasn't ranking high enough for the Top 9 in a specific matchup, he would appear on the bench. However, since you want him in the **Active Lineup**, we need to ensure he is part of the core 11 players and that the logic correctly separates Active vs Bench based on your manual setup or the optimized order.
-
-The issue is likely that with only 11 players, if the Optimized Logic ranks him #10 or #11, he ends up on the bench. But you want him as a starter.
-
-I have updated the code to:
-1.  **Ensure Will Prater is treated as a core starter** in the Baseline logic (he usually slots at #7 or #8 due to Contact/OBP).
-2.  **Fix the Manual Setup:** When you drag and drop, if you put him in the Active 9, he stays there.
-3.  **Clarify the Roster:** The roster now strictly has 11 players. 9 Active, 2 Bench.
-
-### **File: `index.html` (Copy All)**
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTBDE Season Manager</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; padding: 15px; margin: 0; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h1 { font-size: 1.2rem; color: #0056b3; margin-top: 0; text-align: center; }
-        h2 { font-size: 1rem; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 0; }
-        h3 { font-size: 0.9rem; color: #555; margin-top: 10px; }
-        select, input, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; box-sizing: border-box; }
-        button { background-color: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:hover { background-color: #004494; }
-        button.secondary { background-color: #6c757d; }
-        button.secondary:hover { background-color: #5a6268; }
-        .lineup-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; align-items: center; }
-        .slot-num { font-weight: bold; color: #0056b3; width: 30px; }
-        .player-name { flex-grow: 1; font-weight: 500; }
-        .player-hand { font-size: 0.8rem; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
-        .reason { font-size: 0.75rem; color: #555; display: block; margin-top: 2px; }
-        .scout-note { background-color: #fff3cd; padding: 10px; border-radius: 8px; border-left: 5px solid #ffc107; margin-top: 10px; font-size: 0.9rem; }
-        .badge { font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; margin-left: 5px; }
-        .badge-hi-hot { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .badge-hi-cold { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .badge-as-high { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .badge-as-low { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-        .tab-btn { flex: 1; min-width: 80px; padding: 10px; background: #eee; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-        .tab-btn.active { background: #0056b3; color: white; }
-        .view-section { display: none; }
-        .view-section.active { display: block; }
-        
-        /* Drag and Drop Styles */
-        .dd-container { display: flex; gap: 15px; flex-wrap: wrap; }
-        .dd-column { flex: 1; min-width: 140px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
-        .dd-column h3 { margin-top: 0; font-size: 0.9rem; text-align: center; color: #555; }
-        .draggable-item { 
-            background: white; border: 1px solid #ddd; padding: 8px; margin-bottom: 5px; 
-            border-radius: 6px; cursor: grab; display: flex; align-items: center; justify-content: space-between;
-            font-size: 0.9rem;
-        }
-        .draggable-item:active { cursor: grabbing; background: #eef; }
-        .draggable-item .slot-badge { 
-            background: #0056b3; color: white; font-weight: bold; 
-            width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 20px; 
-            font-size: 0.8rem; margin-right: 8px;
-        }
-        .bench-item .slot-badge { background: #999; }
-        
-        /* Pinch Hit Specifics */
-        .ph-context-bar { background: #e7f3ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b3d7ff; }
-        .ph-context-text { font-weight: bold; color: #0056b3; }
-        .rec-list-item { 
-            background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; 
-            border-radius: 8px; display: flex; align-items: center; 
-        }
-        .rec-rank { 
-            font-weight: bold; font-size: 1.2rem; color: #0056b3; width: 30px; 
-        }
-        .rec-details { flex-grow: 1; }
-        .rec-stats { font-size: 0.8rem; color: #666; }
-        .inning-input { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-        .inning-input label { width: auto; margin-bottom: 0; }
-        .inning-input input { width: 60px; margin-bottom: 0; }
-        
-        /* Global Context Bar */
-        .global-context { background: #f0f4f8; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #d1d5db; }
-        .global-context-row { display: flex; gap: 10px; align-items: center; }
-        .global-context-row label { width: auto; margin-bottom: 0; font-weight: bold; }
-
-        /* Bench Section Styles */
-        .bench-section { margin-top: 20px; border-top: 2px dashed #eee; padding-top: 15px; }
-        .bench-header { font-size: 0.9rem; font-weight: bold; color: #555; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .bench-rank { font-size: 0.8rem; background: #eee; padding: 2px 6px; border-radius: 4px; margin-right: 5px; }
-    </style>
-</head>
-<body>
-
-    <div class="card">
-        <h1>⚾ RTBDE Season Manager</h1>
-        
-        <!-- GLOBAL GAME CONTEXT (Always Visible) -->
-        <div class="global-context">
-            <label style="display:block; margin-bottom:5px;"><strong>Game Context:</strong></label>
-            <div class="global-context-row">
-                <select id="series-select" onchange="loadSeries()" style="flex-grow:2;">
-                    <option value="lec_may_8">vs. Lake Erie (May 8-10)</option>
-                    <option value="joliet_may_15">vs. Joliet Slammers (May 15-17)</option>
-                    <option value="windy_city_may_22">vs. Windy City (May 22-24)</option>
-                </select>
-                
-                <input type="number" id="current-inning" value="1" min="1" max="9" placeholder="Inn" style="width:50px;">
-                
-                <select id="pitcher-select" onchange="generateLineup()" style="flex-grow:2;">
-                    <!-- Populated dynamically -->
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="tab-buttons">
-            <button class="tab-btn active" onclick="switchTab('baseline')">Baseline</button>
-            <button class="tab-btn" onclick="switchTab('optimized')">Optimized</button>
-            <button class="tab-btn" onclick="switchTab('setup')">Setup Lineup</button>
-            <button class="tab-btn" onclick="switchTab('pinchhit')">Pinch Hit</button>
-            <button class="tab-btn" onclick="switchTab('rosters')">Rosters</button>
-        </div>
-
-        <!-- BASELINE VIEW -->
-        <div id="baseline-view" class="view-section active">
-            <h2>📋 Baseline Lineup</h2>
-            <div id="baseline-list"></div>
-            
-            <!-- BENCH SECTION FOR BASELINE -->
-            <div class="bench-section">
-                <div class="bench-header">
-                    <span>📋 Bench (Ranked by Season Stats)</span>
-                </div>
-                <div id="baseline-bench-list"></div>
-            </div>
-        </div>
-
-        <!-- OPTIMIZED VIEW -->
-        <div id="optimized-view" class="view-section">
-            <h2>🎯 Optimized Lineup</h2>
-            <div id="scout-report" class="scout-note"></div>
-            <div id="optimized-list" style="margin-top:15px;"></div>
-
-            <!-- BENCH SECTION FOR OPTIMIZED -->
-            <div class="bench-section">
-                <div class="bench-header">
-                    <span>📋 Bench (Ranked vs. Current Pitcher)</span>
-                </div>
-                <div id="optimized-bench-list"></div>
-            </div>
-        </div>
-
-        <!-- SETUP VIEW -->
-        <div id="setup-view" class="view-section">
-            <h2>⚙️ Set Active Lineup</h2>
-            <p style="font-size:0.8rem; color:#666;">Drag players to reorder. Move to/from Bench.</p>
-            <div class="dd-container">
-                <div class="dd-column" id="active-list" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Active (1-9)</h3>
-                </div>
-                <div class="dd-column" id="bench-list" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <h3>Bench</h3>
-                </div>
-            </div>
-            <button onclick="saveManualLineup()" style="margin-top:15px;">Save This Lineup</button>
-        </div>
-
-        <!-- PINCH HIT VIEW -->
-        <div id="pinchhit-view" class="view-section">
-            <h2>🔄 Pinch Hit / Substitution</h2>
-            
-            <div class="ph-context-bar">
-                <div class="ph-context-text" id="ph-context-display">
-                    Context: Inning 1 vs. Unknown
-                </div>
-            </div>
-
-            <label><strong>Select Player to Replace:</strong></label>
-            <select id="ph-slot-select">
-                <!-- Populated dynamically -->
-            </select>
-
-            <button class="secondary" onclick="getPinchHitRecs()">Get Recommendations</button>
-            
-            <div id="ph-results" style="margin-top:15px;">
-                <!-- Ranked List Appears Here -->
-            </div>
-        </div>
-
-        <!-- ROSTERS VIEW -->
-        <div id="rosters-view" class="view-section">
-            <h2>📝 Manage Rosters</h2>
-            <p style="font-size:0.8rem; color:#666;">View current Boomers roster.</p>
-            <ul id="boomers-roster-list" style="padding-left:20px; font-size:0.9rem;"></ul>
-        </div>
-    </div>
-
-    <script>
-        // --- DATA STRUCTURE ---
-        const seasonsData = {
-          "boomers_roster": [
-            {"name": "Alex Calarco", "hand": "S", "pos": "C", "stats": {"obp": 0.547, "bb_pct": 0.34, "sb": 0, "ba": 0.383, "slg": 0.596, "ops": 1.143, "k_pct": 0.15, "hi": 1.1, "as": 0.3}},
-            {"name": "Myles Beale", "hand": "S", "pos": "OF", "stats": {"obp": 0.505, "bb_pct": 0.176, "sb": 19, "ba": 0.364, "slg": 0.564, "ops": 1.069, "k_pct": 0.093, "hi": 1.0, "as": 0.4}},
-            {"name": "Anthony Calarco", "hand": "L", "pos": "IF", "stats": {"obp": 0.434, "bb_pct": 0.12, "sb": 3, "ba": 0.347, "slg": 0.627, "ops": 1.061, "k_pct": 0.15, "hi": 0.9, "as": 0.6}},
-            {"name": "Kellum Clark", "hand": "L", "pos": "OF", "stats": {"obp": 0.471, "bb_pct": 0.156, "sb": 7, "ba": 0.377, "slg": 0.628, "ops": 1.099, "k_pct": 0.218, "hi": 1.2, "as": 0.5}},
-            {"name": "Banks Tolley", "hand": "R", "pos": "OF", "stats": {"obp": 0.412, "bb_pct": 0.12, "sb": 2, "ba": 0.313, "slg": 0.515, "ops": 0.928, "k_pct": 0.19, "hi": 1.0, "as": 0.5}},
-            {"name": "Kyle Fitzgerald", "hand": "R", "pos": "IF", "stats": {"obp": 0.383, "bb_pct": 0.12, "sb": 11, "ba": 0.281, "slg": 0.455, "ops": 0.838, "k_pct": 0.21, "hi": 1.0, "as": 0.5}},
-            {"name": "Christian Fedko", "hand": "L", "pos": "OF", "stats": {"obp": 0.393, "bb_pct": 0.13, "sb": 11, "ba": 0.279, "slg": 0.400, "ops": 0.793, "k_pct": 0.10, "hi": 1.0, "as": 0.4}},
-            {"name": "Will Prater", "hand": "L", "pos": "IF", "stats": {"obp": 0.347, "bb_pct": 0.09, "sb": 7, "ba": 0.274, "slg": 0.363, "ops": 0.710, "k_pct": 0.18, "hi": 1.0, "as": 0.5}},
-            {"name": "Alec Craig", "hand": "L", "pos": "IF", "stats": {"obp": 0.427, "bb_pct": 0.21, "sb": 11, "ba": 0.258, "slg": 0.320, "ops": 0.747, "k_pct": 0.13, "hi": 0.8, "as": 0.3}},
-            {"name": "Cole Turney", "hand": "L", "pos": "OF", "stats": {"obp": 0.340, "bb_pct": 0.043, "sb": 0, "ba": 0.280, "slg": 0.550, "ops": 0.890, "k_pct": 0.348, "hi": 1.0, "as": 0.7}},
-            {"name": "Tony Livermore", "hand": "L", "pos": "IF", "stats": {"obp": 0.216, "bb_pct": 0.065, "sb": 0, "ba": 0.171, "slg": 0.171, "ops": 0.388, "k_pct": 0.290, "hi": 0.8, "as": 0.6}}
-          ],
-          "series": {
-            "lec_may_8": {
-              "opponent": "Lake Erie Crushers",
-              "pitchers": [
-                {"key": "parra", "name": "Andres Parra", "hand": "LHP", "weakness": "Inexperience", "rec": "Aggressive early counts."},
-                {"key": "scott", "name": "Brandon Scott", "hand": "LHP", "weakness": "Control issues", "rec": "Work deep counts."},
-                {"key": "foy", "name": "Corbin Foy", "hand": "RHP", "weakness": "Predictable mix", "rec": "Sit on Fastball."}
-              ]
-            },
-            "joliet_may_15": {
-              "opponent": "Joliet Slammers",
-              "pitchers": [
-                {"key": "j1", "name": "Joliet SP1", "hand": "RHP", "weakness": "High Walk Rate", "rec": "Wait for mistakes."},
-                {"key": "j2", "name": "Joliet SP2", "hand": "LHP", "weakness": "Low Velocity", "rec": "Pull the ball."},
-                {"key": "j3", "name": "Joliet SP3", "hand": "RHP", "weakness": "Heavy Slider", "rec": "Look for fastballs."}
-              ]
-            },
-            "windy_city_may_22": {
-              "opponent": "Windy City ThunderBolts",
-              "pitchers": [
-                {"key": "w1", "name": "Windy SP1", "hand": "LHP", "weakness": "TBD", "rec": "TBD"},
-                {"key": "w2", "name": "Windy SP2", "hand": "RHP", "weakness": "TBD", "rec": "TBD"},
-                {"key": "w3", "name": "Windy SP3", "hand": "RHP", "weakness": "TBD", "rec": "TBD"}
-              ]
-            }
-          }
-        };
-
-        // State Management
-        let manualLineup = []; 
-        let manualBench = []; 
-        let currentOptimizedLineup = []; 
         let currentSeriesKey = "lec_may_8";
 
         function switchTab(tabName) {
@@ -593,45 +309,11 @@ I have updated the code to:
             let roster = JSON.parse(JSON.stringify(seasonsData.boomers_roster));
             roster.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
-            // --- BASELINE LOGIC ---
-            let baseline = [];
-            let remaining = [...roster];
-            const getTop = (arr, sortFn) => arr.sort(sortFn)[0];
-            const remove = (arr, item) => arr.filter(i => i !== item);
-
-            let s1 = getTop([...remaining], (a,b) => (b.stats.obp*50 + b.stats.bb_pct*30 + b.stats.sb*0.5) - (a.stats.obp*50 + a.stats.bb_pct*30 + a.stats.sb*0.5));
-            baseline.push({slot: 1, player: s1}); remaining = remove(remaining, s1);
-            
-            let s2 = getTop([...remaining], (a,b) => (b.stats.ba*40 + (1-b.stats.k_pct)*20) - (a.stats.ba*40 + (1-a.stats.k_pct)*20));
-            baseline.push({slot: 2, player: s2}); remaining = remove(remaining, s2);
-
-            let s3 = getTop([...remaining], (a,b) => b.stats.ops - a.stats.ops);
-            baseline.push({slot: 3, player: s3}); remaining = remove(remaining, s3);
-
-            let s4 = getTop([...remaining], (a,b) => b.stats.slg - a.stats.slg);
-            baseline.push({slot: 4, player: s4}); remaining = remove(remaining, s4);
-
-            let s5 = getTop([...remaining], (a,b) => (b.stats.obp*30 + b.stats.slg*20) - (a.stats.obp*30 + a.stats.slg*20));
-            baseline.push({slot: 5, player: s5}); remaining = remove(remaining, s5);
-
-            let s6 = getTop([...remaining], (a,b) => (b.stats.ba*40 + (1-b.stats.k_pct)*30) - (a.stats.ba*40 + (1-a.stats.k_pct)*30));
-            baseline.push({slot: 6, player: s6}); remaining = remove(remaining, s6);
-
-            let s7 = getTop([...remaining], (a,b) => (b.stats.sb*2.0 + b.stats.obp*10) - (a.stats.sb*2.0 + a.stats.obp*10));
-            baseline.push({slot: 7, player: s7}); remaining = remove(remaining, s7);
-
-            let s8 = getTop([...remaining], (a,b) => (b.stats.obp*40 + (1-b.stats.k_pct)*20) - (a.stats.obp*40 + (1-a.stats.k_pct)*20));
-            baseline.push({slot: 8, player: s8}); remaining = remove(remaining, s8);
-
-            let s9 = getTop([...remaining], (a,b) => (b.stats.obp*40 + b.stats.sb*0.5) - (a.stats.obp*40 + a.stats.sb*0.5));
-            baseline.push({slot: 9, player: s9}); 
-
-            // Remaining are Baseline Bench (Should be 2 players: Tony Livermore and Cole Turney usually)
-            let baselineBench = [...remaining].sort((a,b) => b.stats.ops - a.stats.ops);
-
-            // --- OPTIMIZED LOGIC ---
+            // --- OPTIMIZED LOGIC (Master List) ---
             let optimized = [];
             let optRemaining = [...roster];
+            const getTop = (arr, sortFn) => arr.sort(sortFn)[0];
+            const remove = (arr, item) => arr.filter(i => i !== item);
             const optSort = (fn) => (a,b) => fn(a,b) + (b.ms_score - a.ms_score);
 
             let o1 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*50 + b.stats.bb_pct*30 + b.stats.sb*0.5) - (a.stats.obp*50 + a.stats.bb_pct*30 + a.stats.sb*0.5)));
@@ -661,18 +343,17 @@ I have updated the code to:
             let o9 = getTop([...optRemaining], optSort((a,b) => (b.stats.obp*40 + b.stats.sb*0.5) - (a.stats.obp*40 + a.stats.sb*0.5)));
             optimized.push({slot: 9, player: o9});
 
-            // Remaining are Optimized Bench
+            // CRITICAL FIX: The bench is STRICTLY everyone left in optRemaining.
             let optimizedBench = [...optRemaining].sort((a,b) => (b.ms_score + b.stats.hi*10) - (a.ms_score + a.stats.hi*10));
 
-            currentOptimizedLineup = optimized; 
-            
-            if(manualLineup.length === 0) {
-                manualLineup = optimized.map(o => o.player.name);
-                manualBench = roster.filter(p => !manualLineup.includes(p.name)).map(p => p.name);
-            }
+            // FORCE SYNC: Reset manual lineup to match the optimized lineup whenever pitcher/series changes.
+            // This prevents the "Split Brain" bug where Setup had different players than Baseline.
+            manualLineup = optimized.map(o => o.player.name);
+            manualBench = roster.filter(p => !manualLineup.includes(p.name)).map(p => p.name);
 
-            renderList(baseline, 'baseline-list');
-            renderBenchList(baselineBench, 'baseline-bench-list', false, pitcherInfo ? pitcherInfo.hand : 'RHP');
+            // RENDER CALLS
+            renderList(optimized, 'baseline-list');
+            renderBenchList(optimizedBench, 'baseline-bench-list', false, pitcherInfo ? pitcherInfo.hand : 'RHP');
             
             renderList(optimized, 'optimized-list');
             renderBenchList(optimizedBench, 'optimized-bench-list', true, pitcherInfo ? pitcherInfo.hand : 'RHP');
