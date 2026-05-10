@@ -175,33 +175,41 @@
         // --- DATA STRUCTURE ---
         const seasonsData = {
           "boomers_roster": [
-            {"name": "Alex Calarco", "hand": "S", "pos": "C", "stats": {"obp": 0.547, "bb_pct": 0.34, "sb": 0, "ba": 0.383, "slg": 0.596, "ops": 1.143, "k_pct": 0.15, "hi": 1.1, "as": 0.3}},
-            {"name": "Myles Beale", "hand": "S", "pos": "OF", "stats": {"obp": 0.505, "bb_pct": 0.176, "sb": 19, "ba": 0.364, "slg": 0.564, "ops": 1.069, "k_pct": 0.093, "hi": 1.0, "as": 0.4}},
-            {"name": "Anthony Calarco", "hand": "L", "pos": "IF", "stats": {"obp": 0.434, "bb_pct": 0.12, "sb": 3, "ba": 0.347, "slg": 0.627, "ops": 1.061, "k_pct": 0.15, "hi": 0.9, "as": 0.6}},
-            {"name": "Kellum Clark", "hand": "L", "pos": "OF", "stats": {"obp": 0.471, "bb_pct": 0.156, "sb": 7, "ba": 0.377, "slg": 0.628, "ops": 1.099, "k_pct": 0.218, "hi": 1.2, "as": 0.5}},
-            {"name": "Banks Tolley", "hand": "R", "pos": "OF", "stats": {"obp": 0.412, "bb_pct": 0.12, "sb": 2, "ba": 0.313, "slg": 0.515, "ops": 0.928, "k_pct": 0.19, "hi": 1.0, "as": 0.5}},
-            {"name": "Kyle Fitzgerald", "hand": "R", "pos": "IF", "stats": {"obp": 0.383, "bb_pct": 0.12, "sb": 11, "ba": 0.281, "slg": 0.455, "ops": 0.838, "k_pct": 0.21, "hi": 1.0, "as": 0.5}},
-            {"name": "Christian Fedko", "hand": "L", "pos": "OF", "stats": {"obp": 0.393, "bb_pct": 0.13, "sb": 11, "ba": 0.279, "slg": 0.400, "ops": 0.793, "k_pct": 0.10, "hi": 1.0, "as": 0.4}},
-            {"name": "Will Prater", "hand": "L", "pos": "IF", "stats": {"obp": 0.347, "bb_pct": 0.09, "sb": 7, "ba": 0.274, "slg": 0.363, "ops": 0.710, "k_pct": 0.18, "hi": 1.0, "as": 0.5}},
-            {"name": "Alec Craig", "hand": "L", "pos": "IF", "stats": {"obp": 0.427, "bb_pct": 0.21, "sb": 11, "ba": 0.258, "slg": 0.320, "ops": 0.747, "k_pct": 0.13, "hi": 0.8, "as": 0.3}},
-            {"name": "Cole Turney", "hand": "L", "pos": "OF", "stats": {"obp": 0.340, "bb_pct": 0.043, "sb": 0, "ba": 0.280, "slg": 0.550, "ops": 0.890, "k_pct": 0.348, "hi": 1.0, "as": 0.7}},
+            {"name": "Alex Calarco", "hand": "S", "pos": "C", "stats": {"obp": 0.489, "bb_pct": 0.20, "sb": 0, "ba": 0.364, "slg": 0.542, "ops": 1.031, "k_pct": 0.17, "hi": 0.85, "as": 0.3}},
+            {"name": "Myles Beale", "hand": "S", "pos": "OF", "stats": {"obp": 0.650, "bb_pct": 0.286, "sb": 1, "ba": 0.500, "slg": 0.611, "ops": 1.261, "k_pct": 0.0, "hi": 1.35, "as": 0.4}},
+            {"name": "Anthony Calarco", "hand": "L", "pos": "IF", "stats": {"obp": 0.267, "bb_pct": 0.0, "sb": 0, "ba": 0.222, "slg": 0.417, "ops": 0.684, "k_pct": 0.4, "hi": 0.75, "as": 0.6}},
+            {"name": "Kellum Clark", "hand": "L", "pos": "OF", "stats": {"obp": 0.550, "bb_pct": 0.111, "sb": 0, "ba": 0.522, "slg": 0.522, "ops": 1.072, "k_pct": 0.222, "hi": 1.25, "as": 0.5}},
+            {"name": "Banks Tolley", "hand": "R", "pos": "OF", "stats": {"obp": 0.500, "bb_pct": 0.2, "sb": 3, "ba": 0.375, "slg": 0.375, "ops": 0.875, "k_pct": 0.111, "hi": 1.15, "as": 0.5}},
+            {"name": "Kyle Fitzgerald", "hand": "R", "pos": "IF", "stats": {"obp": 0.417, "bb_pct": 0.0, "sb": 0, "ba": 0.417, "slg": 0.417, "ops": 0.834, "k_pct": 0.111, "hi": 1.05, "as": 0.5}},
+            {"name": "Christian Fedko", "hand": "L", "pos": "OF", "stats": {"obp": 0.550, "bb_pct": 0.333, "sb": 0, "ba": 0.083, "slg": 0.083, "ops": 0.633, "k_pct": 0.0, "hi": 0.9, "as": 0.4}},
+            {"name": "Will Prater", "hand": "L", "pos": "IF", "stats": {"obp": 0.267, "bb_pct": 0.167, "sb": 0, "ba": 0.083, "slg": 0.083, "ops": 0.350, "k_pct": 0.333, "hi": 0.95, "as": 0.5}},
+            {"name": "Alec Craig", "hand": "L", "pos": "IF", "stats": {"obp": 0.528, "bb_pct": 0.1, "sb": 1, "ba": 0.500, "slg": 0.500, "ops": 1.028, "k_pct": 0.2, "hi": 1.2, "as": 0.3}},
+            {"name": "Cole Turney", "hand": "L", "pos": "OF", "stats": {"obp": 0.250, "bb_pct": 0.0, "sb": 0, "ba": 0.250, "slg": 1.000, "ops": 1.250, "k_pct": 0.2, "hi": 1.1, "as": 0.7}},
             {"name": "Tony Livermore", "hand": "L", "pos": "IF", "stats": {"obp": 0.216, "bb_pct": 0.065, "sb": 0, "ba": 0.171, "slg": 0.171, "ops": 0.388, "k_pct": 0.290, "hi": 0.8, "as": 0.6}}
           ],
           "series": {
             "lec_may_8": {
               "opponent": "Lake Erie Crushers",
               "pitchers": [
-                {"key": "parra", "name": "Andres Parra", "hand": "LHP", "weakness": "Inexperience", "rec": "Aggressive early counts."},
-                {"key": "scott", "name": "Brandon Scott", "hand": "LHP", "weakness": "Control issues", "rec": "Work deep counts."},
-                {"key": "foy", "name": "Corbin Foy", "hand": "RHP", "weakness": "Predictable mix", "rec": "Sit on Fastball."}
+                {"key": "sittinger", "name": "Brandyn Sittinger", "hand": "RHP", "weakness": "Veteran presence", "rec": "Attack early"},
+                {"key": "scafidi", "name": "Christian Scafidi", "hand": "RHP", "weakness": "Tall frame", "rec": "Keep ball down"},
+                {"key": "noriega", "name": "Branden Noriega", "hand": "LHP", "weakness": "Lefty specialist", "rec": "Righty bats advantage"},
+                {"key": "foy", "name": "Corbin Foy", "hand": "RHP", "weakness": "Predictable mix", "rec": "Sit on Fastball"},
+                {"key": "helt", "name": "Robert Helt", "hand": "RHP", "weakness": "Tall pitcher", "rec": "Work counts"},
+                {"key": "shinn", "name": "Nathan Shinn", "hand": "LHP", "weakness": "Lefty", "rec": "Righty bats advantage"},
+                {"key": "scott", "name": "Brandon Scott", "hand": "LHP", "weakness": "Control issues", "rec": "Work deep counts"},
+                {"key": "beriguete", "name": "Randy Beriguete", "hand": "RHP", "weakness": "Tall pitcher", "rec": "Keep ball in park"},
+                {"key": "sanchez", "name": "Dikember Sanchez", "hand": "RHP", "weakness": "MiLB experience", "rec": "Test secondary pitches"},
+                {"key": "parra", "name": "Andres Parra", "hand": "LHP", "weakness": "Inexperience", "rec": "Aggressive early counts"},
+                {"key": "nova", "name": "Fraynel Nova", "hand": "RHP", "weakness": "Young arm", "rec": "Make him throw strikes"}
               ]
             },
             "joliet_may_15": {
               "opponent": "Joliet Slammers",
               "pitchers": [
-                {"key": "j1", "name": "Joliet SP1", "hand": "RHP", "weakness": "High Walk Rate", "rec": "Wait for mistakes."},
-                {"key": "j2", "name": "Joliet SP2", "hand": "LHP", "weakness": "Low Velocity", "rec": "Pull the ball."},
-                {"key": "j3", "name": "Joliet SP3", "hand": "RHP", "weakness": "Heavy Slider", "rec": "Look for fastballs."}
+                {"key": "j1", "name": "Joliet SP1", "hand": "RHP", "weakness": "High Walk Rate", "rec": "Wait for mistakes"},
+                {"key": "j2", "name": "Joliet SP2", "hand": "LHP", "weakness": "Low Velocity", "rec": "Pull the ball"},
+                {"key": "j3", "name": "Joliet SP3", "hand": "RHP", "weakness": "Heavy Slider", "rec": "Look for fastballs"}
               ]
             },
             "windy_city_may_22": {
