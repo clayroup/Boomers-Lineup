@@ -38,9 +38,10 @@
         .ph-row label { width: auto; margin-bottom: 0; font-weight: bold; white-space: nowrap; }
         .ph-row input, .ph-row select { margin-bottom: 0; }
         .rec-list-item { background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; }
-        .rec-rank { font-weight: bold; font-size: 1.1rem; color: #0056b3; }
-        .rec-stats { font-size: 0.8rem; color: #666; }
         .priority-badge { font-size: 1.2rem; margin-right: 8px; }
+        .no-upgrade { background: #fee2e2; border: 1px solid #fca5a5; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
+        .recommend-box { background: #e7f3ff; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
+        .alternatives-box { background: #f9f9f9; padding: 8px; border-radius: 6px; border: 1px solid #eee; }
         
         /* Global Context Bar */
         .global-context { background: #f0f4f8; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #d1d5db; }
@@ -392,7 +393,7 @@
             switchTab('pinchhit');
         }
 
-        // --- PINCH HIT LOGIC (UPDATED WITH PRIORITY RANKING) ---
+        // --- PINCH HIT LOGIC (UPDATED) ---
         function generatePinchHitOptions() {
             const inning = document.getElementById('ph-inning').value;
             const pitcherKey = document.getElementById('ph-pitcher-select').value;
@@ -405,7 +406,7 @@
                 return;
             }
 
-            // Calculate next 4 batters due
+            // Calculate next 4 batters due (in lineup order)
             let slotsDue = [];
             let current = firstSlot;
             for(let i=0; i<4; i++) {
@@ -416,18 +417,17 @@
             let benchPlayers = seasonsData.boomers_roster.filter(p => manualBench.includes(p.name));
             benchPlayers.forEach(p => p.ms_score = calculateMS(p, pitcherKey));
 
-            // Calculate upgrade score for each slot
-            let phOptions = [];
+            // Calculate upgrade scores for each slot
+            let slotOptions = [];
             slotsDue.forEach(slot => {
                 const idx = slot - 1;
                 const currentPlayer = manualLineup[idx];
                 const currentObj = seasonsData.boomers_roster.find(p => p.name === currentPlayer);
-                
                 if (!currentObj) return;
-                
+
                 const currentMS = calculateMS(currentObj, pitcherKey);
                 
-                // Find best bench replacement
+                // Rank bench players for this specific slot
                 let rankedBench = [...benchPlayers].sort((a,b) => {
                     let scoreA = a.ms_score + (a.stats.hi * 10);
                     let scoreB = b.ms_score + (b.stats.hi * 10);
@@ -435,63 +435,88 @@
                     if (slot === 3 || slot === 4) { scoreA += a.stats.slg * 15; scoreB += b.stats.slg * 15; }
                     return scoreB - scoreA;
                 });
-                
+
                 const bestPH = rankedBench[0];
                 if (!bestPH) return;
-                
+
                 const benchMS = bestPH.ms_score;
                 const msUpgrade = benchMS - currentMS;
                 const hiUpgrade = bestPH.stats.hi - currentObj.stats.hi;
                 
-                // Slot importance weight (cleanup/core slots matter more)
+                // Slot importance weight
                 let slotWeight = 1.0;
                 if ([3,4,5].includes(slot)) slotWeight = 1.3;
                 else if ([2,6].includes(slot)) slotWeight = 1.1;
                 
-                // Calculate composite upgrade score
+                // Composite upgrade score
                 const upgradeScore = (msUpgrade * 0.6 + hiUpgrade * 10 * 0.3) * slotWeight;
-                
-                phOptions.push({
+                const isRecommended = upgradeScore > 2.0; // Threshold for meaningful upgrade
+
+                slotOptions.push({
                     slot: slot,
                     currentPlayer: currentPlayer,
                     currentObj: currentObj,
+                    currentMS: currentMS,
+                    currentHI: currentObj.stats.hi,
+                    rankedBench: rankedBench,
                     bestPH: bestPH,
                     upgradeScore: upgradeScore,
-                    msUpgrade: msUpgrade,
-                    hiUpgrade: hiUpgrade
+                    isRecommended: isRecommended
                 });
             });
             
-            // Sort by upgrade score (highest first = most impactful)
-            phOptions.sort((a,b) => b.upgradeScore - a.upgradeScore);
+            // Assign priority ranks (1-4) based on upgradeScore, but keep lineup order for display
+            let sortedByScore = [...slotOptions].sort((a,b) => b.upgradeScore - a.upgradeScore);
+            let rankMap = {};
+            sortedByScore.forEach((opt, i) => {
+                rankMap[opt.slot] = i + 1;
+            });
             
-            // Generate output
+            // Generate output in original lineup order
             let html = `<h3>Inning ${inning} vs. ${pitcher ? pitcher.name : 'Unknown'}</h3>`;
             html += `<p style="margin-bottom:10px;">Next batters due: <strong>${slotsDue.map(s => 'Slot '+s).join(', ')}</strong></p>`;
             html += `<p style="margin-bottom:15px; font-size:0.9rem; color:#666;">🎯 Ranked by substitution impact (MS upgrade + Hotness + Slot importance)</p>`;
             html += `<div style="display:grid; gap:10px;">`;
 
-            phOptions.forEach((opt, rank) => {
-                const priorityIcon = rank === 0 ? '🥇' : (rank === 1 ? '🥈' : (rank === 2 ? '🥉' : '🏅'));
-                const priorityLabel = rank === 0 ? 'MOST IMPACTFUL' : (rank === 1 ? 'High Priority' : (rank === 2 ? 'Medium' : 'Lower'));
+            slotsDue.forEach(slotNum => {
+                const opt = slotOptions.find(o => o.slot === slotNum);
+                if (!opt) return;
+
+                const priorityNum = rankMap[slotNum];
+                const priorityIcon = priorityNum === 1 ? '🥇' : (priorityNum === 2 ? '🥈' : (priorityNum === 3 ? '🥉' : '🏅'));
+                const priorityLabel = priorityNum === 1 ? 'Most Impactful' : (priorityNum === 2 ? 'High Priority' : (priorityNum === 3 ? 'Medium' : 'Lower'));
                 
-                html += `
-                    <div class="rec-list-item" style="${rank === 0 ? 'border:2px solid #0056b3; background:#f0f7ff;' : ''}">
-                        <div style="display:flex; align-items:center; margin-bottom:5px;">
-                            <span class="priority-badge">${priorityIcon}</span>
-                            <strong>#${rank+1} Priority: ${priorityLabel}</strong>
-                        </div>
-                        <div style="font-weight:bold; margin-bottom:5px;">Slot ${opt.slot}: ${opt.currentPlayer} ${opt.currentObj ? '('+opt.currentObj.hand+')' : ''}</div>
-                        <div style="background:#e7f3ff; padding:8px; border-radius:6px; width:100%; margin-bottom:5px;">
-                            <strong>✅ Recommended PH:</strong> ${opt.bestPH.name} ${opt.bestPH.hand}<br>
-                            <small>MS Upgrade: +${Math.round(opt.msUpgrade)} | HI: ${opt.bestPH.stats.hi} | OBP: ${opt.bestPH.stats.obp} | SLG: ${opt.bestPH.stats.slg}</small>
-                        </div>
-                        <div style="font-size:0.8rem; color:#666;">
-                            Current: MS ${Math.round(calculateMS(opt.currentObj, pitcherKey))} | HI ${opt.currentObj.stats.hi} → 
-                            Bench: MS ${Math.round(opt.bestPH.ms_score)} | HI ${opt.bestPH.stats.hi}
-                        </div>
-                    </div>
-                `;
+                html += `<div class="rec-list-item" style="${priorityNum === 1 && opt.isRecommended ? 'border:2px solid #0056b3; background:#f0f7ff;' : ''}">`;
+                html += `<div style="display:flex; align-items:center; margin-bottom:5px;">`;
+                html += `<span class="priority-badge">${priorityIcon}</span>`;
+                html += `<strong>Slot ${opt.slot} (#${priorityNum} Priority)</strong> - ${priorityLabel}`;
+                html += `</div>`;
+                
+                html += `<div style="font-weight:bold; margin-bottom:5px;">Current: ${opt.currentPlayer} ${opt.currentObj ? '('+opt.currentObj.hand+')' : ''}</div>`;
+                
+                if (opt.isRecommended) {
+                    html += `<div class="recommend-box">`;
+                    html += `<strong>✅ Recommended PH:</strong> ${opt.bestPH.name} ${opt.bestPH.hand}<br>`;
+                    html += `<small>Upgrade Score: +${opt.upgradeScore.toFixed(1)} | MS: ${opt.currentMS} → ${Math.round(opt.bestPH.ms_score)} | HI: ${opt.currentHI} → ${opt.bestPH.stats.hi}</small>`;
+                    html += `</div>`;
+                    
+                    // Show alternatives (next 2 best)
+                    let alts = opt.rankedBench.slice(1, 3);
+                    if (alts.length > 0) {
+                        html += `<div class="alternatives-box">`;
+                        html += `<strong style="font-size:0.85rem; color:#666;">📋 Alternatives:</strong><br>`;
+                        alts.forEach(alt => {
+                            html += `<small>• ${alt.name} ${alt.hand} | MS: ${Math.round(alt.ms_score)} | HI: ${alt.stats.hi}</small><br>`;
+                        });
+                        html += `</div>`;
+                    }
+                } else {
+                    html += `<div class="no-upgrade">`;
+                    html += `<strong>❌ No Upgrade Recommended</strong><br>`;
+                    html += `<small>Current batter has equal/better matchup & hotness. Keep ${opt.currentPlayer} in.</small>`;
+                    html += `</div>`;
+                }
+                html += `</div>`;
             });
             html += `</div>`;
             document.getElementById('ph-results').innerHTML = html;
