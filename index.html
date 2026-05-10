@@ -139,11 +139,9 @@
                     <select id="ph-pitcher-select" style="flex-grow:1;"></select>
                 </div>
                 <div class="ph-row">
-                    <label>First Batter Due (Slot 1-9):</label>
+                    <label>Next Batter Due:</label>
                     <select id="ph-first-batter" style="flex-grow:1;">
-                        <option value="1">Slot 1</option><option value="2">Slot 2</option><option value="3">Slot 3</option>
-                        <option value="4">Slot 4</option><option value="5">Slot 5</option><option value="6">Slot 6</option>
-                        <option value="7">Slot 7</option><option value="8">Slot 8</option><option value="9">Slot 9</option>
+                        <!-- Populated dynamically -->
                     </select>
                 </div>
             </div>
@@ -225,6 +223,7 @@
             if(tabName === 'setup') renderSetupView();
             if(tabName === 'pinchhit') {
                 populatePHPitchers();
+                populateFirstBatterDropdown();
                 generatePinchHitOptions();
             }
             if(tabName === 'rosters') renderRosters();
@@ -254,6 +253,29 @@
                 opt.text = `${p.name} (${p.hand})`;
                 pSelect.add(opt);
             });
+        }
+
+        function populateFirstBatterDropdown() {
+            const select = document.getElementById('ph-first-batter');
+            select.innerHTML = "";
+            
+            if (manualLineup.length !== 9) {
+                let opt = document.createElement('option');
+                opt.value = "";
+                opt.text = "-- Save lineup first --";
+                select.add(opt);
+                return;
+            }
+            
+            for (let i = 0; i < 9; i++) {
+                const playerName = manualLineup[i];
+                const playerObj = seasonsData.boomers_roster.find(p => p.name === playerName);
+                const hand = playerObj ? playerObj.hand : '';
+                let opt = document.createElement('option');
+                opt.value = (i + 1).toString();
+                opt.text = `${i + 1}. ${playerName} (${hand})`;
+                select.add(opt);
+            }
         }
 
         function calculateMS(player, pitcherKey) {
@@ -474,7 +496,6 @@
             
             // Generate output in original lineup order
             let html = `<h3>Inning ${inning} vs. ${pitcher ? pitcher.name : 'Unknown'}</h3>`;
-            html += `<p style="margin-bottom:10px;">Next batters due: <strong>${slotsDue.map(s => 'Slot '+s).join(', ')}</strong></p>`;
             html += `<p style="margin-bottom:15px; font-size:0.9rem; color:#666;">🎯 Ranked by substitution impact (MS upgrade + Hotness + Slot importance)</p>`;
             html += `<div style="display:grid; gap:10px;">`;
 
@@ -483,21 +504,15 @@
                 if (!opt) return;
 
                 const priorityNum = rankMap[slotNum];
-                const priorityIcon = priorityNum === 1 ? '🥇' : (priorityNum === 2 ? '🥈' : (priorityNum === 3 ? '🥉' : '🏅'));
-                const priorityLabel = priorityNum === 1 ? 'Most Impactful' : (priorityNum === 2 ? 'High Priority' : (priorityNum === 3 ? 'Medium' : 'Lower'));
+                const hand = opt.currentObj ? opt.currentObj.hand : '';
                 
                 html += `<div class="rec-list-item" style="${priorityNum === 1 && opt.isRecommended ? 'border:2px solid #0056b3; background:#f0f7ff;' : ''}">`;
-                html += `<div style="display:flex; align-items:center; margin-bottom:5px;">`;
-                html += `<span class="priority-badge">${priorityIcon}</span>`;
-                html += `<strong>Slot ${opt.slot} (#${priorityNum} Priority)</strong> - ${priorityLabel}`;
-                html += `</div>`;
-                
-                html += `<div style="font-weight:bold; margin-bottom:5px;">Current: ${opt.currentPlayer} ${opt.currentObj ? '('+opt.currentObj.hand+')' : ''}</div>`;
+                html += `<div style="font-weight:bold; margin-bottom:5px; font-size:1.1rem;">${opt.slot}. ${opt.currentPlayer} (${hand})</div>`;
                 
                 if (opt.isRecommended) {
-                    html += `<div class="recommend-box">`;
-                    html += `<strong>✅ Recommended PH:</strong> ${opt.bestPH.name} ${opt.bestPH.hand}<br>`;
-                    html += `<small>Upgrade Score: +${opt.upgradeScore.toFixed(1)} | MS: ${opt.currentMS} → ${Math.round(opt.bestPH.ms_score)} | HI: ${opt.currentHI} → ${opt.bestPH.stats.hi}</small>`;
+                    html += `<div class="recommend-box" style="background:#d4edda; border:1px solid #c3e6cb; padding:10px; border-radius:6px; margin-bottom:8px;">`;
+                    html += `<strong style="color:#155724;">#${priorityNum} Recommended PH:</strong> ${opt.bestPH.name} ${opt.bestPH.hand}<br>`;
+                    html += `<small style="color:#155724;">Upgrade Score: +${opt.upgradeScore.toFixed(1)} | MS: ${opt.currentMS} → ${Math.round(opt.bestPH.ms_score)} | HI: ${opt.currentHI} → ${opt.bestPH.stats.hi}</small>`;
                     html += `</div>`;
                     
                     // Show alternatives (next 2 best)
@@ -511,9 +526,9 @@
                         html += `</div>`;
                     }
                 } else {
-                    html += `<div class="no-upgrade">`;
-                    html += `<strong>❌ No Upgrade Recommended</strong><br>`;
-                    html += `<small>Current batter has equal/better matchup & hotness. Keep ${opt.currentPlayer} in.</small>`;
+                    html += `<div class="no-upgrade" style="background:#fee2e2; border:1px solid #fca5a5; padding:10px; border-radius:6px; margin-bottom:8px;">`;
+                    html += `<strong style="color:#721c24;">❌ No Upgrade Recommended</strong><br>`;
+                    html += `<small style="color:#721c24;">Current batter has equal/better matchup & hotness. Keep ${opt.currentPlayer} in.</small>`;
                     html += `</div>`;
                 }
                 html += `</div>`;
